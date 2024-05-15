@@ -1,0 +1,84 @@
+---
+title: "Data_Memo_Markdown"
+author: Chris Dare
+output: html_document
+date: "2024-04-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidymodels)
+library(ggplot2)
+library(corrplot)
+library(ggthemes)
+tidymodels_prefer()
+```
+
+```{r eval = TRUE}
+SSD <- read.csv("semiconductor_stock_data.csv")
+head(SSD, 5)
+tail(SSD, 5)
+```
+
+# Overview of Dataset
+
+* What does it include?
+
+*This dataset is comprised of 1 year's worth ( 252 business / trading days ) of New York Stock Exchange data for twelve of the most popular semiconductor manufacturers: Advanced Micro Devices (AMD), Applied Materials Inc. (AMAT), ASML Holding N.V. (ASML), Broadcom Inc. (AVGO), Intel Corporation (INTC), Monolithic Power Systems Inc. (MPWR), Nvidia Corp. (NVDA), NXP Semiconductors NV (NXPI), On Semiconductor Corp. (ON), Qualcomm Inc. (QCOM), Taiwan Semiconductor Manufacturing Co. Ltd. (TSM), and Texas Instruments Inc (TXN).*
+
+*The stock exchange data is comprised of the opening price of that stock (Open), the maximum price reached during the day (High), the minimum price reached (Low), the closing cost of the stock (Close), the adjusted close price after dividends and splits (Adj_Close), and the number of shares that changed hands during a given day (Volume).*
+
+* Where and how will you be obtaining it? Include the link and source.
+
+*All stock market data was obtained from [Yahoo Finance](https://finance.yahoo.com/). Each company's 1 year historical stock data was individually pulled from Yahoo's historical data. For example, AMD's stock prices were obtained by downloading the CSV file from [AMD's Historical Data page](https://finance.yahoo.com/quote/AMD/history/). All of the stocks' individual CSV files were then concatenated together, with an extra column (Symbol) created to distinguish the different stocks. *
+
+* About how many observations? How many predictors?
+
+*There are 252 observations for each of the 12 stocks, giving a total of 3024 observations (though the 12 stocks are meant to be treated as separate groups). There are a total of six predictors: opening price of that stock (Open), the maximum price reached during the day (High), the minimum price reached (Low), the closing cost of the stock (Close), the adjusted close price after dividends and splits (Adj_Close), and the number of shares that changed hands during a given day (Volume).*
+
+* What types of variables will you be working with?
+
+*All of the predictors are assumed to be continuous, though the Volume is always an integer value.*
+
+* Is there any missing data? About how much? Do you have an idea for how to handle it?
+
+*No --- since the NYSE is closed on weekends and holidays, the 252 observations for each of the 12 stocks encompases all the days that the stock exchange has been open over the past 365 days. One could argue that there is a significant amount of additional historical data for each company; however, some stocks / companies have existed significantly longer than others (ex. Texas Instruments (TXN) went public in 1953, where as NXP Semiconductors (NXPI) didnt make its public offering until late 2010).  *
+
+# An Overview of your Research Questions
+
+* What variable(s) are you interested in predicting? What question(s) are you interested in answering?
+
+*The main objective is to predict the closing price value for each of the 12 stocks. One question that I am interested in answering is how the stock trends of competitors (say last 14-day average) affects a given semiconductor manufacturer's stock price.*
+
+* Name your response/outcome variable(s) and briefly describe it/them.
+
+*Close: the closing cost (in USD) of a stock on a given day.*
+
+* Will these questions be best answered with a classification or regression approach?
+
+*Regression; we are assuming that all variables are continuous.*
+
+* Which predictors do you think will be especially useful?
+
+*Opening cost, High and Low (and in particular the difference to see how volatile a stock is on a given day)*
+
+* Is the goal of your model descriptive, predictive, inferential, or a combination? Explain.
+
+*A combination of predictive and inferential: I would like to predict the closing costs of a given stock based on the given training data, however finding whether there is a relationship between competitors stocks and a given manufacturers stocks is inferential by nature.*
+
+# Your Proposed Project Timeline
+
+* When do you plan on having your data set loaded, beginning your exploratory data analysis, etc? Provide a general timeline for the rest of the quarter.
+
+*The data is already loaded above. I plan to begin an exploratory data analysis this upcoming week (during week 3), and then applying different supervised techniques as they are introduced over the course of the quarter.*
+
+# Any Questions or Concerns
+
+* Are there any problems or difficult aspects of the project you anticipate?
+
+*There are many additional factors that play into a given stock's price which are paramount to investors, such as PE ratio, Earnings, Levered free cash flow, return on equity, return on assets, etc. Ultimately these factors would need to be considered in a much more accurate model, but due to the fact that several of these predictors are updated monthly, quarterly, or yearly makes it much more difficult to include in a 1-year data set. *
+
+* Any specific questions you have for me/the instructional team?
+
+*When computing longer term trends, such as 14 day averages, I may have some questions on how to fill in that data for the first <14 entries. I.e. would I just say that the 14-day average for AMD on the first day is just that first days value, the 14-day average for AMD on the second day is the average of the first two days, the average of AMD on the 13th day is the average of the first 13 days, and then use the usual formula for days 14 through 252?*
