@@ -63,6 +63,7 @@ However, since one goal of this analysis is to test the affect of competitor's s
 SSD <- read.csv("data/semiconductor_stock_data_mod.csv")
 SSD$Date <- as.Date(SSD$Date, format="%m/%d/%y")
 
+
 SSD %>%
   head() %>%
   kable() %>% 
@@ -86,6 +87,37 @@ vis_miss(SSD)
 # Exploratory Data Analysis
 
 We examine the data in terms of the predictors that are given to us, and then see if there are any other possible metrics to analyze our stock prices by. First we wish to explain the relevance of each predictor in the initial data frame, though not all variables will be used in our predictive models due to a high correlation (for example, the previous day's closing price is heavily correlated to the current day's opening price). Next, we examine other possible methods to predict our stocks behavior by looking at both historical metrics and normalized metrics. 
+
+
+```{r include = TRUE, warning = FALSE, message = FALSE}
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_Open =  sum(c_across(ends_with("Open")))) 
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_Adj_Close = sum(c_across(ends_with("Adj_Close"))))
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_Close = (sum(c_across(ends_with("Close"))) - sum(c_across(ends_with("Adj_Close"))) ) )
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_High = sum(c_across(ends_with("High"))))
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_Low = sum(c_across(ends_with("Low"))))
+SSD <- SSD %>%
+  rowwise() %>%
+  mutate(Portfolio_Volume = sum(c_across(ends_with("Volume"))))
+
+
+Portfolio <- data.frame(Date = SSD$Date,
+                        Open = SSD$Portfolio_Open,
+                        Close = SSD$Portfolio_Close,
+                        High = SSD$Portfolio_High,
+                        Low = SSD$Portfolio_Low,
+                        Adj_Close = SSD$Portfolio_Adj_Close,
+                        Volume = SSD$Portfolio_Volume)
+```
 
 ## Describing the Predictors
 
@@ -138,7 +170,13 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
-
+```{r include = TRUE, warning = FALSE, message = FALSE}
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = Open, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: Opening Price") +
+  theme_dark()
+```
 
 ### xx_Close
 
@@ -191,6 +229,14 @@ ggplot(data = SSD, aes(x=Date)) +
 ```
 
 There are ultimately a few noticeable differences close to extrema (maxima and minima) several of the stocks, but this simply reflects the fact that stock prices become volatile after an extended period of growth (i.e a 'bubble') or decay. 
+
+```{r include = TRUE, warning = FALSE, message = FALSE}
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = Close, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: Closing Price") +
+  theme_dark()
+```
 
 
 ### xx_Adj_Close
@@ -251,6 +297,16 @@ ggplot(data = SSD, aes(x=Date)) +
 
 It should be noted, however, that stocks' movement (i.e. High minus Low) is not always the best way to directly compare two stocks, since their average prices could vary drastically. For example, the AVGO stock attains values over 1000 USD per share while Intel Corporation (INTC) regularly holds its share price just under $50 — thus, if both stocks fluctuate over a given day by 1% of their total value, the movement of AVGO will appear as significantly more drastic than INTC due to the fact that AVGO's shares are worth 20 times that of INTC. Ultimately this will not be of importance later on in the model fitting stage, since all numeric variables will be rescaled in the recipe creation.
 
+
+
+```{r include = TRUE, warning = FALSE, message = FALSE}
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = (High - Low), color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: High - Low") +
+  theme_dark()
+```
+
 ### xx_Volume
 
 Lastly, the variables ending with Volume indicate the number of stock shares that are traded (i.e. either bought or sold) on that given day. As the only predictor in our data-set not measured in terms of a currency, volume gives useful insights into a company's popularity and thus potential future trends for that stock. 
@@ -282,6 +338,14 @@ data.frame(name=c("AMAT", "AMD", "ASML", "AVGO", "INTC", "MPWR", "NVDA", "NXPI",
 
 Based on the above plots, one can also see that the semiconductor manufacturing market is primarily dominated by three corporations: AMD, Intel (INTC), and NVIDIA (NVDA). 
 
+
+```{r include = TRUE, warning = FALSE, message = FALSE}
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = Volume, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: Volume") +
+  theme_dark()
+```
 
 
 
@@ -452,7 +516,6 @@ ggplot(data = SSD, aes(x=Date)) +
 
 One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
 
-
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 ggplot(data = SSD, aes(x=Date)) +
   geom_line(aes(y = AMD_avg_cl_2M, color = 'AMD')) +
@@ -497,6 +560,21 @@ ggplot(data = SSD, aes(x=Date)) +
   ggtitle("2-Month Average") +
   theme_dark()
 ```
+
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$avg_cl_1W <- running_average(Portfolio$Close, 5)
+Portfolio$avg_cl_2W <- running_average(Portfolio$Close, 10)
+Portfolio$avg_cl_1M <- running_average(Portfolio$Close, 20)
+Portfolio$avg_cl_2M <- running_average(Portfolio$Close, 40)
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_cl_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Average of Closing Price") +
+  theme_dark()
+```
+
 
 ### n-Day Standard Deviation
 
@@ -661,7 +739,18 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
- 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$std_dev_cl_1W <- running_deviation(Portfolio$Close, 5)
+Portfolio$std_dev_cl_2W <- running_deviation(Portfolio$Close, 10)
+Portfolio$std_dev_cl_1M <- running_deviation(Portfolio$Close, 20)
+Portfolio$std_dev_cl_2M <- running_deviation(Portfolio$Close, 40)
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_cl_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Standard Deviation of Closing Price") +
+  theme_dark()
+```
 
 ### n-Day Average Return
 
@@ -672,18 +761,18 @@ One of the main reasons someone invests in a stock is because they believe there
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_Return <- (SSD$NVDA_Adj_Close - SSD$NVDA_Open)
-SSD$TSM_Return <- (SSD$TSM_Adj_Close - SSD$TSM_Open)
-SSD$NXPI_Return <- (SSD$NXPI_Adj_Close - SSD$NXPI_Open)
-SSD$QCOM_Return <- (SSD$QCOM_Adj_Close - SSD$QCOM_Open)
-SSD$MPWR_Return <- (SSD$MPWR_Adj_Close - SSD$MPWR_Open)
-SSD$ON_Return <- (SSD$ON_Adj_Close - SSD$ON_Open)
-SSD$AMD_Return <- (SSD$AMD_Adj_Close - SSD$AMD_Open)
-SSD$INTC_Return <- (SSD$INTC_Adj_Close - SSD$INTC_Open)
-SSD$AVGO_Return <- (SSD$AVGO_Adj_Close - SSD$AVGO_Open)
-SSD$ASML_Return <- (SSD$ASML_Adj_Close - SSD$ASML_Open)
-SSD$AMAT_Return <- (SSD$AMAT_Adj_Close - SSD$AMAT_Open)
-SSD$TXN_Return <- (SSD$TXN_Adj_Close - SSD$TXN_Open)
+SSD$NVDA_Return <- (SSD$NVDA_Close - SSD$NVDA_Open)
+SSD$TSM_Return <- (SSD$TSM_Close - SSD$TSM_Open)
+SSD$NXPI_Return <- (SSD$NXPI_Close - SSD$NXPI_Open)
+SSD$QCOM_Return <- (SSD$QCOM_Close - SSD$QCOM_Open)
+SSD$MPWR_Return <- (SSD$MPWR_Close - SSD$MPWR_Open)
+SSD$ON_Return <- (SSD$ON_Close - SSD$ON_Open)
+SSD$AMD_Return <- (SSD$AMD_Close - SSD$AMD_Open)
+SSD$INTC_Return <- (SSD$INTC_Close - SSD$INTC_Open)
+SSD$AVGO_Return <- (SSD$AVGO_Close - SSD$AVGO_Open)
+SSD$ASML_Return <- (SSD$ASML_Close - SSD$ASML_Open)
+SSD$AMAT_Return <- (SSD$AMAT_Close - SSD$AMAT_Open)
+SSD$TXN_Return <- (SSD$TXN_Close - SSD$TXN_Open)
 
 
 SSD$NVDA_avg_ret_1W <- running_average(SSD$NVDA_Return, 5)
@@ -784,6 +873,22 @@ ggplot(data = SSD, aes(x=Date)) +
 ```
 
 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$Return <- (Portfolio$Close - Portfolio$Open)
+
+
+Portfolio$avg_ret_1W <- running_average(Portfolio$Return, 5)
+Portfolio$avg_ret_2W <- running_average(Portfolio$Return, 10)
+Portfolio$avg_ret_1M <- running_average(Portfolio$Return, 20)
+Portfolio$avg_ret_2M <- running_average(Portfolio$Return, 40)
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_ret_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Average Return") +
+  theme_dark()
+```
+
 ### n-Day Return Standard Deviation
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
@@ -882,6 +987,19 @@ ggplot(data = SSD, aes(x=Date)) +
     'TSM' = 'red')) +
   ylab('USD') + 
   ggtitle("2-Week Standard Deviation") +
+  theme_dark()
+```
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$std_dev_ret_1W <- running_deviation(Portfolio$Return, 5)
+Portfolio$std_dev_ret_2W <- running_deviation(Portfolio$Return, 10)
+Portfolio$std_dev_ret_1M <- running_deviation(Portfolio$Return, 20)
+Portfolio$std_dev_ret_2M <- running_deviation(Portfolio$Return, 40)
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_ret_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
   theme_dark()
 ```
 
@@ -990,6 +1108,21 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$avg_vol_1W <- running_average(Portfolio$Volume, 5)
+Portfolio$avg_vol_2W <- running_average(Portfolio$Volume, 10)
+Portfolio$avg_vol_1M <- running_average(Portfolio$Volume, 20)
+Portfolio$avg_vol_2M <- running_average(Portfolio$Volume, 40)
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_vol_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Average Volume") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+```
+
+
 ### n-Day Volume Standard Deviation
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
@@ -1094,7 +1227,19 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+Portfolio$std_dev_vol_1W <- running_deviation(Portfolio$Volume, 5)
+Portfolio$std_dev_vol_2W <- running_deviation(Portfolio$Volume, 10)
+Portfolio$std_dev_vol_1M <- running_deviation(Portfolio$Volume, 20)
+Portfolio$std_dev_vol_2M <- running_deviation(Portfolio$Volume, 40)
 
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_vol_2W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+```
 
 ## Data Correlation
 
@@ -1118,6 +1263,10 @@ select(SSD, starts_with("NVDA")) %>%
 select(SSD, starts_with("ASML")) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="ASML Correlation Plot")
+
+select(Portfolio, is.numeric) %>%
+  cor() %>% 
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="Portfolio Correlation Plot")
 ```
 From the analysis above, we can somewhat immediately conclude that five of our six original predictors from the CSV file (everything except volume) are very closely correlated. Additionally, since the running averages are defined in terms of the closing cost for each stock individually, it is no surprise that for longer time intervals the running average is closely correlated to the closing cost and thus the remaining original predictors. However, one of the more surprising  correlations that one might not have expected is the mildly positive relationship between the volume of a stock and its normalized volatility — in fact, one might have initially expected a stock that behaves more unpredictably would be traded less, though the correlation plot indicates otherwise. Laslty, we can see from each of the added predictors based on a time-window hyper-parameter that larger values of the time window (i.e. two months) give little to no new insight into the behavior of a stocks value.
 
@@ -1180,6 +1329,7 @@ SSD_split_2M <- initial_split(SSD, prop = 0.7,
                                 strata = NVDA_avg_cl_2M)
 SSD_train_2M <- training(SSD_split_2M)
 SSD_test_2M <- testing(SSD_split_2M)
+
 ```
 
 
