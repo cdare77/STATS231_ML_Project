@@ -117,6 +117,9 @@ Portfolio <- data.frame(Date = SSD$Date,
                         Low = SSD$Portfolio_Low,
                         Adj_Close = SSD$Portfolio_Adj_Close,
                         Volume = SSD$Portfolio_Volume)
+
+
+rm(SSD)
 ```
 
 ## Describing the Predictors
@@ -125,50 +128,6 @@ Portfolio <- data.frame(Date = SSD$Date,
 
 For each of the 12 semiconductor manufacturers chosen (AMAT, AMD, ASML, AVGO, INTC, MPWR, NVDA, NXPI, ON, QCOM, TSM, and TXN), there is a variable called xx_Open (where xx is one of the above stock symbols) which corresponds to that stock's opening price for the day. As the New York Stock exchange operates from 9:30AM to 4:00PM, this indicates the stock's price at 9:30AM that day. 
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_Open, color = 'AMD')) +
-  geom_line(aes(y = NXPI_Open, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_Open, color = 'TXN')) +
-  geom_line(aes(y = AMAT_Open, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("Opening Price") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_Open, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_Open, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_Open, color = 'AVGO')) +
-  geom_line(aes(y = ASML_Open, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("Opening Price") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_Open, color = 'ON')) +
-  geom_line(aes(y = QCOM_Open, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_Open, color = 'INTC')) +
-  geom_line(aes(y = TSM_Open, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("Opening Price") +
-  theme_dark()
-```
 
 ```{r include = TRUE, warning = FALSE, message = FALSE}
 ggplot(data = Portfolio, aes(x=Date)) +
@@ -182,54 +141,6 @@ ggplot(data = Portfolio, aes(x=Date)) +
 
 Similar to the variable xx_Open, the predictor xx_Close simply represents the manufacturer's stock price at closing time (4:00PM) of the Stock Exchange that given day. The 252-day trend between the opening and closing prices are almost indistinguishable: 
 
-
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_Close, color = 'AMD')) +
-  geom_line(aes(y = NXPI_Close, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_Close, color = 'TXN')) +
-  geom_line(aes(y = AMAT_Close, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("Closing Price") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_Close, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_Close, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_Close, color = 'AVGO')) +
-  geom_line(aes(y = ASML_Close, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("Closing Price") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_Close, color = 'ON')) +
-  geom_line(aes(y = QCOM_Close, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_Close, color = 'INTC')) +
-  geom_line(aes(y = TSM_Close, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("Closing Price") +
-  theme_dark()
-```
-
-There are ultimately a few noticeable differences close to extrema (maxima and minima) several of the stocks, but this simply reflects the fact that stock prices become volatile after an extended period of growth (i.e a 'bubble') or decay. 
-
 ```{r include = TRUE, warning = FALSE, message = FALSE}
 ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = Close, color = 'red')) +
@@ -237,6 +148,9 @@ ggplot(data = Portfolio, aes(x=Date)) +
   ggtitle("Portfolio: Closing Price") +
   theme_dark()
 ```
+
+There are ultimately a few noticeable differences close to extrema (maxima and minima) several of the stocks, but this simply reflects the fact that stock prices become volatile after an extended period of growth (i.e a 'bubble') or decay. 
+
 
 
 ### xx_Adj_Close
@@ -250,50 +164,6 @@ It should also be noted that neither the adjusted closing price nor the regular 
 
 The variables xx_High and xx_Low represent the maximum and minimum values, respectively, the stock reached on that particular day. Since a continuous plot of stocks' value is not readily available, taking the difference of these two values (i.e. the stocks movement over a day) is one possible way of predicting how volatile a certain stock is over a period of time. 
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = (AMD_High - AMD_Low), color = 'AMD')) +
-  geom_line(aes(y = (NXPI_High - NXPI_Low), color = 'NXPI')) + 
-  geom_line(aes(y = (TXN_High - TXN_Low), color = 'TXN')) +
-  geom_line(aes(y = (AMAT_High - AMAT_Low), color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("High - Low") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = (NVDA_High - NVDA_Low), color = 'NVDA')) +
-  geom_line(aes(y = (MPWR_High - MPWR_Low), color = 'MPWR')) + 
-  geom_line(aes(y = (AVGO_High - AVGO_Low), color = 'AVGO')) +
-  geom_line(aes(y = (ASML_High - ASML_Low), color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("High - Low") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = (ON_High - ON_Low), color = 'ON')) +
-  geom_line(aes(y = (QCOM_High - QCOM_Low), color = 'QCOM')) + 
-  geom_line(aes(y = (INTC_High - INTC_Low), color = 'INTC')) +
-  geom_line(aes(y = (TSM_High - TSM_Low), color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("High - Low ") +
-  theme_dark()
-```
 
 It should be noted, however, that stocks' movement (i.e. High minus Low) is not always the best way to directly compare two stocks, since their average prices could vary drastically. For example, the AVGO stock attains values over 1000 USD per share while Intel Corporation (INTC) regularly holds its share price just under $50 — thus, if both stocks fluctuate over a given day by 1% of their total value, the movement of AVGO will appear as significantly more drastic than INTC due to the fact that AVGO's shares are worth 20 times that of INTC. Ultimately this will not be of importance later on in the model fitting stage, since all numeric variables will be rescaled in the recipe creation.
 
@@ -312,31 +182,6 @@ ggplot(data = Portfolio, aes(x=Date)) +
 Lastly, the variables ending with Volume indicate the number of stock shares that are traded (i.e. either bought or sold) on that given day. As the only predictor in our data-set not measured in terms of a currency, volume gives useful insights into a company's popularity and thus potential future trends for that stock. 
 
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-data.frame(name=c("AMAT", "AMD", "ASML", "AVGO", "INTC", "MPWR", "NVDA", "NXPI", "ON", "QCOM", "TSM", "TXN"), vols=c( SSD$AMAT_Volume[1], SSD$AMD_Volume[1], SSD$ASML_Volume[1], SSD$AVGO_Volume[1], SSD$INTC_Volume[1], SSD$MPWR_Volume[1], SSD$NVDA_Volume[1], SSD$NXPI_Volume[1], SSD$ON_Volume[1], SSD$QCOM_Volume[1], SSD$TSM_Volume[1], SSD$TXN_Volume[1] ) ) %>% ggplot( aes(x=name, y=vols)) + 
-  geom_bar(stat = "identity") +
-  scale_y_continuous(limits = c(0, 80000000), labels = label_comma()) +
-  ylab('') + 
-  xlab('') +
-  ggtitle("Volume of Stocks Sold on 4/13/2023") 
-
-data.frame(name=c("AMAT", "AMD", "ASML", "AVGO", "INTC", "MPWR", "NVDA", "NXPI", "ON", "QCOM", "TSM", "TXN"), vols=c( SSD$AMAT_Volume[126], SSD$AMD_Volume[126], SSD$ASML_Volume[126], SSD$AVGO_Volume[126], SSD$INTC_Volume[126], SSD$MPWR_Volume[126], SSD$NVDA_Volume[126], SSD$NXPI_Volume[126], SSD$ON_Volume[126], SSD$QCOM_Volume[126], SSD$TSM_Volume[126], SSD$TXN_Volume[126] ) ) %>% ggplot( aes(x=name, y=vols)) + 
-  geom_bar(stat = "identity") +
-  scale_y_continuous(limits = c(0, 80000000), labels = label_comma()) +
-  ylab('') + 
-  xlab('') +
-  ggtitle("Volume of Stocks Sold on 10/10/2023") 
-
-data.frame(name=c("AMAT", "AMD", "ASML", "AVGO", "INTC", "MPWR", "NVDA", "NXPI", "ON", "QCOM", "TSM", "TXN"), vols=c( SSD$AMAT_Volume[252], SSD$AMD_Volume[252], SSD$ASML_Volume[252], SSD$AVGO_Volume[252], SSD$INTC_Volume[252], SSD$MPWR_Volume[252], SSD$NVDA_Volume[252], SSD$NXPI_Volume[252], SSD$ON_Volume[252], SSD$QCOM_Volume[252], SSD$TSM_Volume[252], SSD$TXN_Volume[252] ) ) %>% ggplot( aes(x=name, y=vols)) + 
-  geom_bar(stat = "identity") +
-  scale_y_continuous(labels = label_comma()) +
-  ylab('') + 
-  xlab('') +
-  ggtitle("Volume of Stocks Sold on 4/12/2024") 
-
-```
-
-Based on the above plots, one can also see that the semiconductor manufacturing market is primarily dominated by three corporations: AMD, Intel (INTC), and NVIDIA (NVDA). 
 
 
 ```{r include = TRUE, warning = FALSE, message = FALSE}
@@ -416,164 +261,46 @@ running_average <- function(my_vec, num_days) {
   }
   return(output_vec)
 }
-  
-SSD$NVDA_avg_cl_1W <- running_average(SSD$NVDA_Close, 5)
-SSD$TSM_avg_cl_1W <- running_average(SSD$TSM_Close, 5)
-SSD$NXPI_avg_cl_1W <- running_average(SSD$NXPI_Close, 5)
-SSD$QCOM_avg_cl_1W <- running_average(SSD$QCOM_Close, 5)
-SSD$MPWR_avg_cl_1W <- running_average(SSD$MPWR_Close, 5)
-SSD$ON_avg_cl_1W <- running_average(SSD$ON_Close, 5)
-SSD$AMD_avg_cl_1W <- running_average(SSD$AMD_Close, 5)
-SSD$INTC_avg_cl_1W <- running_average(SSD$INTC_Close, 5)
-SSD$AVGO_avg_cl_1W <- running_average(SSD$AVGO_Close, 5)
-SSD$ASML_avg_cl_1W <- running_average(SSD$ASML_Close, 5)
-SSD$AMAT_avg_cl_1W <- running_average(SSD$AMAT_Close, 5)
-SSD$TXN_avg_cl_1W <- running_average(SSD$TXN_Close, 5)
 
-SSD$NVDA_avg_cl_2W <- running_average(SSD$NVDA_Close, 10)
-SSD$TSM_avg_cl_2W <- running_average(SSD$TSM_Close, 10)
-SSD$NXPI_avg_cl_2W <- running_average(SSD$NXPI_Close, 10)
-SSD$QCOM_avg_cl_2W <- running_average(SSD$QCOM_Close, 10)
-SSD$MPWR_avg_cl_2W <- running_average(SSD$MPWR_Close, 10)
-SSD$ON_avg_cl_2W <- running_average(SSD$ON_Close, 10)
-SSD$AMD_avg_cl_2W <- running_average(SSD$AMD_Close, 10)
-SSD$INTC_avg_cl_2W <- running_average(SSD$INTC_Close, 10)
-SSD$AVGO_avg_cl_2W <- running_average(SSD$AVGO_Close, 10)
-SSD$ASML_avg_cl_2W <- running_average(SSD$ASML_Close, 10)
-SSD$AMAT_avg_cl_2W <- running_average(SSD$AMAT_Close, 10)
-SSD$TXN_avg_cl_2W <- running_average(SSD$TXN_Close, 10)
-
-SSD$NVDA_avg_cl_1M <- running_average(SSD$NVDA_Close, 20)
-SSD$TSM_avg_cl_1M <- running_average(SSD$TSM_Close, 20)
-SSD$NXPI_avg_cl_1M <- running_average(SSD$NXPI_Close, 20)
-SSD$QCOM_avg_cl_1M <- running_average(SSD$QCOM_Close, 20)
-SSD$MPWR_avg_cl_1M <- running_average(SSD$MPWR_Close, 20)
-SSD$ON_avg_cl_1M <- running_average(SSD$ON_Close, 20)
-SSD$AMD_avg_cl_1M <- running_average(SSD$AMD_Close, 20)
-SSD$INTC_avg_cl_1M <- running_average(SSD$INTC_Close, 20)
-SSD$AVGO_avg_cl_1M <- running_average(SSD$AVGO_Close, 20)
-SSD$ASML_avg_cl_1M <- running_average(SSD$ASML_Close, 20)
-SSD$AMAT_avg_cl_1M <- running_average(SSD$AMAT_Close, 20)
-SSD$TXN_avg_cl_1M <- running_average(SSD$TXN_Close, 20)
-
-SSD$NVDA_avg_cl_2M <- running_average(SSD$NVDA_Close, 40)
-SSD$TSM_avg_cl_2M <- running_average(SSD$TSM_Close, 40)
-SSD$NXPI_avg_cl_2M <- running_average(SSD$NXPI_Close, 40)
-SSD$QCOM_avg_cl_2M <- running_average(SSD$QCOM_Close, 40)
-SSD$MPWR_avg_cl_2M <- running_average(SSD$MPWR_Close, 40)
-SSD$ON_avg_cl_2M <- running_average(SSD$ON_Close, 40)
-SSD$AMD_avg_cl_2M <- running_average(SSD$AMD_Close, 40)
-SSD$INTC_avg_cl_2M <- running_average(SSD$INTC_Close, 40)
-SSD$AVGO_avg_cl_2M <- running_average(SSD$AVGO_Close, 40)
-SSD$ASML_avg_cl_2M <- running_average(SSD$ASML_Close, 40)
-SSD$AMAT_avg_cl_2M <- running_average(SSD$AMAT_Close, 40)
-SSD$TXN_avg_cl_2M <- running_average(SSD$TXN_Close, 40)
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_cl_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_cl_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_cl_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_cl_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_cl_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_cl_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_cl_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_cl_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_cl_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_cl_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_cl_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_cl_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average") +
-  theme_dark()
-```
-
-One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_cl_2M, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_cl_2M, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_cl_2M, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_cl_2M, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("2-Month Average") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_cl_2M, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_cl_2M, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_cl_2M, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_cl_2M, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("2-Month Average") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_cl_2M, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_cl_2M, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_cl_2M, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_cl_2M, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("2-Month Average") +
-  theme_dark()
-```
-
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
 Portfolio$avg_cl_1W <- running_average(Portfolio$Close, 5)
 Portfolio$avg_cl_2W <- running_average(Portfolio$Close, 10)
 Portfolio$avg_cl_1M <- running_average(Portfolio$Close, 20)
 Portfolio$avg_cl_2M <- running_average(Portfolio$Close, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_cl_1W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Week Average of Closing Price") +
+  scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = avg_cl_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average of Closing Price") +
+  scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_cl_1M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Month Average of Closing Price") +
+  scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_cl_2M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Month Average of Closing Price") +
+  scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
   theme_dark()
 ```
+
+One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
+
+
+
+ 
 
 
 ### n-Day Standard Deviation
@@ -642,113 +369,34 @@ running_deviation <- function(my_vec, num_days) {
   return(output_vec)
 }
 
-SSD$NVDA_std_dev_cl_1W <- running_deviation(SSD$NVDA_Close, 5)
-SSD$TSM_std_dev_cl_1W <- running_deviation(SSD$TSM_Close, 5)
-SSD$NXPI_std_dev_cl_1W <- running_deviation(SSD$NXPI_Close, 5)
-SSD$QCOM_std_dev_cl_1W <- running_deviation(SSD$QCOM_Close, 5)
-SSD$MPWR_std_dev_cl_1W <- running_deviation(SSD$MPWR_Close, 5)
-SSD$ON_std_dev_cl_1W <- running_deviation(SSD$ON_Close, 5)
-SSD$AMD_std_dev_cl_1W <- running_deviation(SSD$AMD_Close, 5)
-SSD$INTC_std_dev_cl_1W <- running_deviation(SSD$INTC_Close, 5)
-SSD$AVGO_std_dev_cl_1W <- running_deviation(SSD$AVGO_Close, 5)
-SSD$ASML_std_dev_cl_1W <- running_deviation(SSD$ASML_Close, 5)
-SSD$AMAT_std_dev_cl_1W <- running_deviation(SSD$AMAT_Close, 5)
-SSD$TXN_std_dev_cl_1W <- running_deviation(SSD$TXN_Close, 5)
-
-SSD$NVDA_std_dev_cl_2W <- running_deviation(SSD$NVDA_Close, 10)
-SSD$TSM_std_dev_cl_2W <- running_deviation(SSD$TSM_Close, 10)
-SSD$NXPI_std_dev_cl_2W <- running_deviation(SSD$NXPI_Close, 10)
-SSD$QCOM_std_dev_cl_2W <- running_deviation(SSD$QCOM_Close, 10)
-SSD$MPWR_std_dev_cl_2W <- running_deviation(SSD$MPWR_Close, 10)
-SSD$ON_std_dev_cl_2W <- running_deviation(SSD$ON_Close, 10)
-SSD$AMD_std_dev_cl_2W <- running_deviation(SSD$AMD_Close, 10)
-SSD$INTC_std_dev_cl_2W <- running_deviation(SSD$INTC_Close, 10)
-SSD$AVGO_std_dev_cl_2W <- running_deviation(SSD$AVGO_Close, 10)
-SSD$ASML_std_dev_cl_2W <- running_deviation(SSD$ASML_Close, 10)
-SSD$AMAT_std_dev_cl_2W <- running_deviation(SSD$AMAT_Close, 10)
-SSD$TXN_std_dev_cl_2W <- running_deviation(SSD$TXN_Close, 10)
-
-SSD$NVDA_std_dev_cl_1M <- running_deviation(SSD$NVDA_Close, 20)
-SSD$TSM_std_dev_cl_1M <- running_deviation(SSD$TSM_Close, 20)
-SSD$NXPI_std_dev_cl_1M <- running_deviation(SSD$NXPI_Close, 20)
-SSD$QCOM_std_dev_cl_1M <- running_deviation(SSD$QCOM_Close, 20)
-SSD$MPWR_std_dev_cl_1M <- running_deviation(SSD$MPWR_Close, 20)
-SSD$ON_std_dev_cl_1M <- running_deviation(SSD$ON_Close, 20)
-SSD$AMD_std_dev_cl_1M <- running_deviation(SSD$AMD_Close, 20)
-SSD$INTC_std_dev_cl_1M <- running_deviation(SSD$INTC_Close, 20)
-SSD$AVGO_std_dev_cl_1M <- running_deviation(SSD$AVGO_Close, 20)
-SSD$ASML_std_dev_cl_1M <- running_deviation(SSD$ASML_Close, 20)
-SSD$AMAT_std_dev_cl_1M <- running_deviation(SSD$AMAT_Close, 20)
-SSD$TXN_std_dev_cl_1M <- running_deviation(SSD$TXN_Close, 20)
-
-SSD$NVDA_std_dev_cl_2M <- running_deviation(SSD$NVDA_Close, 40)
-SSD$TSM_std_dev_cl_2M <- running_deviation(SSD$TSM_Close, 40)
-SSD$NXPI_std_dev_cl_2M <- running_deviation(SSD$NXPI_Close, 40)
-SSD$QCOM_std_dev_cl_2M <- running_deviation(SSD$QCOM_Close, 40)
-SSD$MPWR_std_dev_cl_2M <- running_deviation(SSD$MPWR_Close, 40)
-SSD$ON_std_dev_cl_2M <- running_deviation(SSD$ON_Close, 40)
-SSD$AMD_std_dev_cl_2M <- running_deviation(SSD$AMD_Close, 40)
-SSD$INTC_std_dev_cl_2M <- running_deviation(SSD$INTC_Close, 40)
-SSD$AVGO_std_dev_cl_2M <- running_deviation(SSD$AVGO_Close, 40)
-SSD$ASML_std_dev_cl_2M <- running_deviation(SSD$ASML_Close, 40)
-SSD$AMAT_std_dev_cl_2M <- running_deviation(SSD$AMAT_Close, 40)
-SSD$TXN_std_dev_cl_2M <- running_deviation(SSD$TXN_Close, 40)
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_cl_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_cl_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_cl_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_cl_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_cl_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_cl_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_cl_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_cl_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_cl_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_cl_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_cl_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_cl_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-```
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
 Portfolio$std_dev_cl_1W <- running_deviation(Portfolio$Close, 5)
 Portfolio$std_dev_cl_2W <- running_deviation(Portfolio$Close, 10)
 Portfolio$std_dev_cl_1M <- running_deviation(Portfolio$Close, 20)
 Portfolio$std_dev_cl_2M <- running_deviation(Portfolio$Close, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_cl_1W, color = 'red')) +
+  ylab('USD') + 
+  scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
+  ggtitle("Portfolio: 1-Week Standard Deviation of Closing Price") +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = std_dev_cl_2W, color = 'red')) +
   ylab('USD') + 
+  scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
   ggtitle("Portfolio: 2-Week Standard Deviation of Closing Price") +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_cl_1M, color = 'red')) +
+  ylab('USD') + 
+  scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
+  ggtitle("Portfolio: 1-Month Standard Deviation of Closing Price") +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_cl_2M, color = 'red')) +
+  ylab('USD') + 
+  scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
+  ggtitle("Portfolio: 2-Month Standard Deviation of Closing Price") +
   theme_dark()
 ```
 
@@ -759,123 +407,10 @@ One of the main reasons someone invests in a stock is because they believe there
 
 
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-
-SSD$NVDA_Return <- (SSD$NVDA_Close - SSD$NVDA_Open)
-SSD$TSM_Return <- (SSD$TSM_Close - SSD$TSM_Open)
-SSD$NXPI_Return <- (SSD$NXPI_Close - SSD$NXPI_Open)
-SSD$QCOM_Return <- (SSD$QCOM_Close - SSD$QCOM_Open)
-SSD$MPWR_Return <- (SSD$MPWR_Close - SSD$MPWR_Open)
-SSD$ON_Return <- (SSD$ON_Close - SSD$ON_Open)
-SSD$AMD_Return <- (SSD$AMD_Close - SSD$AMD_Open)
-SSD$INTC_Return <- (SSD$INTC_Close - SSD$INTC_Open)
-SSD$AVGO_Return <- (SSD$AVGO_Close - SSD$AVGO_Open)
-SSD$ASML_Return <- (SSD$ASML_Close - SSD$ASML_Open)
-SSD$AMAT_Return <- (SSD$AMAT_Close - SSD$AMAT_Open)
-SSD$TXN_Return <- (SSD$TXN_Close - SSD$TXN_Open)
 
 
-SSD$NVDA_avg_ret_1W <- running_average(SSD$NVDA_Return, 5)
-SSD$TSM_avg_ret_1W <- running_average(SSD$TSM_Return, 5)
-SSD$NXPI_avg_ret_1W <- running_average(SSD$NXPI_Return, 5)
-SSD$QCOM_avg_ret_1W <- running_average(SSD$QCOM_Return, 5)
-SSD$MPWR_avg_ret_1W <- running_average(SSD$MPWR_Return, 5)
-SSD$ON_avg_ret_1W <- running_average(SSD$ON_Return, 5)
-SSD$AMD_avg_ret_1W <- running_average(SSD$AMD_Return, 5)
-SSD$INTC_avg_ret_1W <- running_average(SSD$INTC_Return, 5)
-SSD$AVGO_avg_ret_1W <- running_average(SSD$AVGO_Return, 5)
-SSD$ASML_avg_ret_1W <- running_average(SSD$ASML_Return, 5)
-SSD$AMAT_avg_ret_1W <- running_average(SSD$AMAT_Return, 5)
-SSD$TXN_avg_ret_1W <- running_average(SSD$TXN_Return, 5)
-
-SSD$NVDA_avg_ret_2W <- running_average(SSD$NVDA_Return, 10)
-SSD$TSM_avg_ret_2W <- running_average(SSD$TSM_Return, 10)
-SSD$NXPI_avg_ret_2W <- running_average(SSD$NXPI_Return, 10)
-SSD$QCOM_avg_ret_2W <- running_average(SSD$QCOM_Return, 10)
-SSD$MPWR_avg_ret_2W <- running_average(SSD$MPWR_Return, 10)
-SSD$ON_avg_ret_2W <- running_average(SSD$ON_Return, 10)
-SSD$AMD_avg_ret_2W <- running_average(SSD$AMD_Return, 10)
-SSD$INTC_avg_ret_2W <- running_average(SSD$INTC_Return, 10)
-SSD$AVGO_avg_ret_2W <- running_average(SSD$AVGO_Return, 10)
-SSD$ASML_avg_ret_2W <- running_average(SSD$ASML_Return, 10)
-SSD$AMAT_avg_ret_2W <- running_average(SSD$AMAT_Return, 10)
-SSD$TXN_avg_ret_2W <- running_average(SSD$TXN_Return, 10)
-
-SSD$NVDA_avg_ret_1M <- running_average(SSD$NVDA_Return, 20)
-SSD$TSM_avg_ret_1M <- running_average(SSD$TSM_Return, 20)
-SSD$NXPI_avg_ret_1M <- running_average(SSD$NXPI_Return, 20)
-SSD$QCOM_avg_ret_1M <- running_average(SSD$QCOM_Return, 20)
-SSD$MPWR_avg_ret_1M <- running_average(SSD$MPWR_Return, 20)
-SSD$ON_avg_ret_1M <- running_average(SSD$ON_Return, 20)
-SSD$AMD_avg_ret_1M <- running_average(SSD$AMD_Return, 20)
-SSD$INTC_avg_ret_1M <- running_average(SSD$INTC_Return, 20)
-SSD$AVGO_avg_ret_1M <- running_average(SSD$AVGO_Return, 20)
-SSD$ASML_avg_ret_1M <- running_average(SSD$ASML_Return, 20)
-SSD$AMAT_avg_ret_1M <- running_average(SSD$AMAT_Return, 20)
-SSD$TXN_avg_ret_1M <- running_average(SSD$TXN_Return, 20)
-
-SSD$NVDA_avg_ret_2M <- running_average(SSD$NVDA_Return, 40)
-SSD$TSM_avg_ret_2M <- running_average(SSD$TSM_Return, 40)
-SSD$NXPI_avg_ret_2M <- running_average(SSD$NXPI_Return, 40)
-SSD$QCOM_avg_ret_2M <- running_average(SSD$QCOM_Return, 40)
-SSD$MPWR_avg_ret_2M <- running_average(SSD$MPWR_Return, 40)
-SSD$ON_avg_ret_2M <- running_average(SSD$ON_Return, 40)
-SSD$AMD_avg_ret_2M <- running_average(SSD$AMD_Return, 40)
-SSD$INTC_avg_ret_2M <- running_average(SSD$INTC_Return, 40)
-SSD$AVGO_avg_ret_2M <- running_average(SSD$AVGO_Return, 40)
-SSD$ASML_avg_ret_2M <- running_average(SSD$ASML_Return, 40)
-SSD$AMAT_avg_ret_2M <- running_average(SSD$AMAT_Return, 40)
-SSD$TXN_avg_ret_2M <- running_average(SSD$TXN_Return, 40)
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_ret_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_ret_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_ret_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_ret_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average Return") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_ret_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_ret_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_ret_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_ret_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average Return") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_ret_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_ret_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_ret_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_ret_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("2-Week Average Return") +
-  theme_dark()
-```
-
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 Portfolio$Return <- (Portfolio$Close - Portfolio$Open)
-
 
 Portfolio$avg_ret_1W <- running_average(Portfolio$Return, 5)
 Portfolio$avg_ret_2W <- running_average(Portfolio$Return, 10)
@@ -883,361 +418,137 @@ Portfolio$avg_ret_1M <- running_average(Portfolio$Return, 20)
 Portfolio$avg_ret_2M <- running_average(Portfolio$Return, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_ret_1W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Week Average Return") +
+  scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = avg_ret_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average Return") +
+  scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_ret_1M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Month Average Return") +
+  scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_ret_2M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Month Average Return") +
+  scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
   theme_dark()
 ```
 
 ### n-Day Return Standard Deviation
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-
-SSD$NVDA_std_dev_ret_1W <- running_deviation(SSD$NVDA_Return, 5)
-SSD$TSM_std_dev_ret_1W <- running_deviation(SSD$TSM_Return, 5)
-SSD$NXPI_std_dev_ret_1W <- running_deviation(SSD$NXPI_Return, 5)
-SSD$QCOM_std_dev_ret_1W <- running_deviation(SSD$QCOM_Return, 5)
-SSD$MPWR_std_dev_ret_1W <- running_deviation(SSD$MPWR_Return, 5)
-SSD$ON_std_dev_ret_1W <- running_deviation(SSD$ON_Return, 5)
-SSD$AMD_std_dev_ret_1W <- running_deviation(SSD$AMD_Return, 5)
-SSD$INTC_std_dev_ret_1W <- running_deviation(SSD$INTC_Return, 5)
-SSD$AVGO_std_dev_ret_1W <- running_deviation(SSD$AVGO_Return, 5)
-SSD$ASML_std_dev_ret_1W <- running_deviation(SSD$ASML_Return, 5)
-SSD$AMAT_std_dev_ret_1W <- running_deviation(SSD$AMAT_Return, 5)
-SSD$TXN_std_dev_ret_1W <- running_deviation(SSD$TXN_Return, 5)
-
-SSD$NVDA_std_dev_ret_2W <- running_deviation(SSD$NVDA_Return, 10)
-SSD$TSM_std_dev_ret_2W <- running_deviation(SSD$TSM_Return, 10)
-SSD$NXPI_std_dev_ret_2W <- running_deviation(SSD$NXPI_Return, 10)
-SSD$QCOM_std_dev_ret_2W <- running_deviation(SSD$QCOM_Return, 10)
-SSD$MPWR_std_dev_ret_2W <- running_deviation(SSD$MPWR_Return, 10)
-SSD$ON_std_dev_ret_2W <- running_deviation(SSD$ON_Return, 10)
-SSD$AMD_std_dev_ret_2W <- running_deviation(SSD$AMD_Return, 10)
-SSD$INTC_std_dev_ret_2W <- running_deviation(SSD$INTC_Return, 10)
-SSD$AVGO_std_dev_ret_2W <- running_deviation(SSD$AVGO_Return, 10)
-SSD$ASML_std_dev_ret_2W <- running_deviation(SSD$ASML_Return, 10)
-SSD$AMAT_std_dev_ret_2W <- running_deviation(SSD$AMAT_Return, 10)
-SSD$TXN_std_dev_ret_2W <- running_deviation(SSD$TXN_Return, 10)
-
-SSD$NVDA_std_dev_ret_1M <- running_deviation(SSD$NVDA_Return, 20)
-SSD$TSM_std_dev_ret_1M <- running_deviation(SSD$TSM_Return, 20)
-SSD$NXPI_std_dev_ret_1M <- running_deviation(SSD$NXPI_Return, 20)
-SSD$QCOM_std_dev_ret_1M <- running_deviation(SSD$QCOM_Return, 20)
-SSD$MPWR_std_dev_ret_1M <- running_deviation(SSD$MPWR_Return, 20)
-SSD$ON_std_dev_ret_1M <- running_deviation(SSD$ON_Return, 20)
-SSD$AMD_std_dev_ret_1M <- running_deviation(SSD$AMD_Return, 20)
-SSD$INTC_std_dev_ret_1M <- running_deviation(SSD$INTC_Return, 20)
-SSD$AVGO_std_dev_ret_1M <- running_deviation(SSD$AVGO_Return, 20)
-SSD$ASML_std_dev_ret_1M <- running_deviation(SSD$ASML_Return, 20)
-SSD$AMAT_std_dev_ret_1M <- running_deviation(SSD$AMAT_Return, 20)
-SSD$TXN_std_dev_ret_1M <- running_deviation(SSD$TXN_Return, 20)
-
-SSD$NVDA_std_dev_ret_2M <- running_deviation(SSD$NVDA_Return, 40)
-SSD$TSM_std_dev_ret_2M <- running_deviation(SSD$TSM_Return, 40)
-SSD$NXPI_std_dev_ret_2M <- running_deviation(SSD$NXPI_Return, 40)
-SSD$QCOM_std_dev_ret_2M <- running_deviation(SSD$QCOM_Return, 40)
-SSD$MPWR_std_dev_ret_2M <- running_deviation(SSD$MPWR_Return, 40)
-SSD$ON_std_dev_ret_2M <- running_deviation(SSD$ON_Return, 40)
-SSD$AMD_std_dev_ret_2M <- running_deviation(SSD$AMD_Return, 40)
-SSD$INTC_std_dev_ret_2M <- running_deviation(SSD$INTC_Return, 40)
-SSD$AVGO_std_dev_ret_2M <- running_deviation(SSD$AVGO_Return, 40)
-SSD$ASML_std_dev_ret_2M <- running_deviation(SSD$ASML_Return, 40)
-SSD$AMAT_std_dev_ret_2M <- running_deviation(SSD$AMAT_Return, 40)
-SSD$TXN_std_dev_ret_2M <- running_deviation(SSD$TXN_Return, 40)
 
 
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_ret_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_ret_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_ret_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_ret_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_ret_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_ret_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_ret_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_ret_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_ret_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_ret_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_ret_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_ret_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-```
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 Portfolio$std_dev_ret_1W <- running_deviation(Portfolio$Return, 5)
 Portfolio$std_dev_ret_2W <- running_deviation(Portfolio$Return, 10)
 Portfolio$std_dev_ret_1M <- running_deviation(Portfolio$Return, 20)
 Portfolio$std_dev_ret_2M <- running_deviation(Portfolio$Return, 40)
 
+
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_ret_1W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Week Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
+  theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = std_dev_ret_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_ret_1M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Month Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_ret_2M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Month Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
   theme_dark()
 ```
 
 
 ### n-Day Average Volume
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_avg_vol_1W <- running_average(SSD$NVDA_Volume, 5)
-SSD$TSM_avg_vol_1W <- running_average(SSD$TSM_Volume, 5)
-SSD$NXPI_avg_vol_1W <- running_average(SSD$NXPI_Volume, 5)
-SSD$QCOM_avg_vol_1W <- running_average(SSD$QCOM_Volume, 5)
-SSD$MPWR_avg_vol_1W <- running_average(SSD$MPWR_Volume, 5)
-SSD$ON_avg_vol_1W <- running_average(SSD$ON_Volume, 5)
-SSD$AMD_avg_vol_1W <- running_average(SSD$AMD_Volume, 5)
-SSD$INTC_avg_vol_1W <- running_average(SSD$INTC_Volume, 5)
-SSD$AVGO_avg_vol_1W <- running_average(SSD$AVGO_Volume, 5)
-SSD$ASML_avg_vol_1W <- running_average(SSD$ASML_Volume, 5)
-SSD$AMAT_avg_vol_1W <- running_average(SSD$AMAT_Volume, 5)
-SSD$TXN_avg_vol_1W <- running_average(SSD$TXN_Volume, 5)
-
-SSD$NVDA_avg_vol_2W <- running_average(SSD$NVDA_Volume, 10)
-SSD$TSM_avg_vol_2W <- running_average(SSD$TSM_Volume, 10)
-SSD$NXPI_avg_vol_2W <- running_average(SSD$NXPI_Volume, 10)
-SSD$QCOM_avg_vol_2W <- running_average(SSD$QCOM_Volume, 10)
-SSD$MPWR_avg_vol_2W <- running_average(SSD$MPWR_Volume, 10)
-SSD$ON_avg_vol_2W <- running_average(SSD$ON_Volume, 10)
-SSD$AMD_avg_vol_2W <- running_average(SSD$AMD_Volume, 10)
-SSD$INTC_avg_vol_2W <- running_average(SSD$INTC_Volume, 10)
-SSD$AVGO_avg_vol_2W <- running_average(SSD$AVGO_Volume, 10)
-SSD$ASML_avg_vol_2W <- running_average(SSD$ASML_Volume, 10)
-SSD$AMAT_avg_vol_2W <- running_average(SSD$AMAT_Volume, 10)
-SSD$TXN_avg_vol_2W <- running_average(SSD$TXN_Volume, 10)
-
-SSD$NVDA_avg_vol_1M <- running_average(SSD$NVDA_Volume, 20)
-SSD$TSM_avg_vol_1M <- running_average(SSD$TSM_Volume, 20)
-SSD$NXPI_avg_vol_1M <- running_average(SSD$NXPI_Volume, 20)
-SSD$QCOM_avg_vol_1M <- running_average(SSD$QCOM_Volume, 20)
-SSD$MPWR_avg_vol_1M <- running_average(SSD$MPWR_Volume, 20)
-SSD$ON_avg_vol_1M <- running_average(SSD$ON_Volume, 20)
-SSD$AMD_avg_vol_1M <- running_average(SSD$AMD_Volume, 20)
-SSD$INTC_avg_vol_1M <- running_average(SSD$INTC_Volume, 20)
-SSD$AVGO_avg_vol_1M <- running_average(SSD$AVGO_Volume, 20)
-SSD$ASML_avg_vol_1M <- running_average(SSD$ASML_Volume, 20)
-SSD$AMAT_avg_vol_1M <- running_average(SSD$AMAT_Volume, 20)
-SSD$TXN_avg_vol_1M <- running_average(SSD$TXN_Volume, 20)
-
-SSD$NVDA_avg_vol_2M <- running_average(SSD$NVDA_Volume, 40)
-SSD$TSM_avg_vol_2M <- running_average(SSD$TSM_Volume, 40)
-SSD$NXPI_avg_vol_2M <- running_average(SSD$NXPI_Volume, 40)
-SSD$QCOM_avg_vol_2M <- running_average(SSD$QCOM_Volume, 40)
-SSD$MPWR_avg_vol_2M <- running_average(SSD$MPWR_Volume, 40)
-SSD$ON_avg_vol_2M <- running_average(SSD$ON_Volume, 40)
-SSD$AMD_avg_vol_2M <- running_average(SSD$AMD_Volume, 40)
-SSD$INTC_avg_vol_2M <- running_average(SSD$INTC_Volume, 40)
-SSD$AVGO_avg_vol_2M <- running_average(SSD$AVGO_Volume, 40)
-SSD$ASML_avg_vol_2M <- running_average(SSD$ASML_Volume, 40)
-SSD$AMAT_avg_vol_2M <- running_average(SSD$AMAT_Volume, 40)
-SSD$TXN_avg_vol_2M <- running_average(SSD$TXN_Volume, 40)
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_vol_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_vol_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_vol_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_vol_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Average Volume") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_vol_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_vol_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_vol_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_vol_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Average Volume") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_vol_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_vol_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_vol_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_vol_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Average Volume") +
-  theme_dark()
-```
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 Portfolio$avg_vol_1W <- running_average(Portfolio$Volume, 5)
 Portfolio$avg_vol_2W <- running_average(Portfolio$Volume, 10)
 Portfolio$avg_vol_1M <- running_average(Portfolio$Volume, 20)
 Portfolio$avg_vol_2M <- running_average(Portfolio$Volume, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_vol_1W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Week Average Volume") +
+  scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = avg_vol_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average Volume") +
-  scale_y_continuous( labels = label_comma()) +
+  scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_vol_1M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Month Average Volume") +
+  scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = avg_vol_2M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Month Average Volume") +
+  scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
   theme_dark()
 ```
 
 
 ### n-Day Volume Standard Deviation
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_std_dev_vol_1W <- running_deviation(SSD$NVDA_Volume, 5)
-SSD$TSM_std_dev_vol_1W <- running_deviation(SSD$TSM_Volume, 5)
-SSD$NXPI_std_dev_vol_1W <- running_deviation(SSD$NXPI_Volume, 5)
-SSD$QCOM_std_dev_vol_1W <- running_deviation(SSD$QCOM_Volume, 5)
-SSD$MPWR_std_dev_vol_1W <- running_deviation(SSD$MPWR_Volume, 5)
-SSD$ON_std_dev_vol_1W <- running_deviation(SSD$ON_Volume, 5)
-SSD$AMD_std_dev_vol_1W <- running_deviation(SSD$AMD_Volume, 5)
-SSD$INTC_std_dev_vol_1W <- running_deviation(SSD$INTC_Volume, 5)
-SSD$AVGO_std_dev_vol_1W <- running_deviation(SSD$AVGO_Volume, 5)
-SSD$ASML_std_dev_vol_1W <- running_deviation(SSD$ASML_Volume, 5)
-SSD$AMAT_std_dev_vol_1W <- running_deviation(SSD$AMAT_Volume, 5)
-SSD$TXN_std_dev_vol_1W <- running_deviation(SSD$TXN_Volume, 5)
-
-SSD$NVDA_std_dev_vol_2W <- running_deviation(SSD$NVDA_Volume, 10)
-SSD$TSM_std_dev_vol_2W <- running_deviation(SSD$TSM_Volume, 10)
-SSD$NXPI_std_dev_vol_2W <- running_deviation(SSD$NXPI_Volume, 10)
-SSD$QCOM_std_dev_vol_2W <- running_deviation(SSD$QCOM_Volume, 10)
-SSD$MPWR_std_dev_vol_2W <- running_deviation(SSD$MPWR_Volume, 10)
-SSD$ON_std_dev_vol_2W <- running_deviation(SSD$ON_Volume, 10)
-SSD$AMD_std_dev_vol_2W <- running_deviation(SSD$AMD_Volume, 10)
-SSD$INTC_std_dev_vol_2W <- running_deviation(SSD$INTC_Volume, 10)
-SSD$AVGO_std_dev_vol_2W <- running_deviation(SSD$AVGO_Volume, 10)
-SSD$ASML_std_dev_vol_2W <- running_deviation(SSD$ASML_Volume, 10)
-SSD$AMAT_std_dev_vol_2W <- running_deviation(SSD$AMAT_Volume, 10)
-SSD$TXN_std_dev_vol_2W <- running_deviation(SSD$TXN_Volume, 10)
-
-SSD$NVDA_std_dev_vol_1M <- running_deviation(SSD$NVDA_Volume, 20)
-SSD$TSM_std_dev_vol_1M <- running_deviation(SSD$TSM_Volume, 20)
-SSD$NXPI_std_dev_vol_1M <- running_deviation(SSD$NXPI_Volume, 20)
-SSD$QCOM_std_dev_vol_1M <- running_deviation(SSD$QCOM_Volume, 20)
-SSD$MPWR_std_dev_vol_1M <- running_deviation(SSD$MPWR_Volume, 20)
-SSD$ON_std_dev_vol_1M <- running_deviation(SSD$ON_Volume, 20)
-SSD$AMD_std_dev_vol_1M <- running_deviation(SSD$AMD_Volume, 20)
-SSD$INTC_std_dev_vol_1M <- running_deviation(SSD$INTC_Volume, 20)
-SSD$AVGO_std_dev_vol_1M <- running_deviation(SSD$AVGO_Volume, 20)
-SSD$ASML_std_dev_vol_1M <- running_deviation(SSD$ASML_Volume, 20)
-SSD$AMAT_std_dev_vol_1M <- running_deviation(SSD$AMAT_Volume, 20)
-SSD$TXN_std_dev_vol_1M <- running_deviation(SSD$TXN_Volume, 20)
-
-SSD$NVDA_std_dev_vol_2M <- running_deviation(SSD$NVDA_Volume, 40)
-SSD$TSM_std_dev_vol_2M <- running_deviation(SSD$TSM_Volume, 40)
-SSD$NXPI_std_dev_vol_2M <- running_deviation(SSD$NXPI_Volume, 40)
-SSD$QCOM_std_dev_vol_2M <- running_deviation(SSD$QCOM_Volume, 40)
-SSD$MPWR_std_dev_vol_2M <- running_deviation(SSD$MPWR_Volume, 40)
-SSD$ON_std_dev_vol_2M <- running_deviation(SSD$ON_Volume, 40)
-SSD$AMD_std_dev_vol_2M <- running_deviation(SSD$AMD_Volume, 40)
-SSD$INTC_std_dev_vol_2M <- running_deviation(SSD$INTC_Volume, 40)
-SSD$AVGO_std_dev_vol_2M <- running_deviation(SSD$AVGO_Volume, 40)
-SSD$ASML_std_dev_vol_2M <- running_deviation(SSD$ASML_Volume, 40)
-SSD$AMAT_std_dev_vol_2M <- running_deviation(SSD$AMAT_Volume, 40)
-SSD$TXN_std_dev_vol_2M <- running_deviation(SSD$TXN_Volume, 40)
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_vol_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_vol_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_vol_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_vol_2W, color = 'AMAT')) +
-  scale_color_manual(values = c(
-    'AMD' = 'green',
-    'AMAT' = 'white',
-    'NXPI' = 'pink',
-    'TXN' = 'lightblue')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_vol_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_vol_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_vol_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_vol_2W, color = 'ASML')) +
-  scale_color_manual(values = c(
-    'NVDA' = 'darkolivegreen1',
-    'MPWR' = 'moccasin',
-    'AVGO' = 'coral',
-    'ASML' = 'gold')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-
-ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_vol_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_vol_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_vol_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_vol_2W, color = 'TSM')) +
-  scale_color_manual(values = c(
-    'ON' = 'cyan',
-    'QCOM' = 'purple',
-    'INTC' = 'yellow',
-    'TSM' = 'red')) +
-  ylab('USD') + 
-  scale_y_continuous( labels = label_comma()) +
-  ggtitle("2-Week Standard Deviation") +
-  theme_dark()
-```
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 Portfolio$std_dev_vol_1W <- running_deviation(Portfolio$Volume, 5)
 Portfolio$std_dev_vol_2W <- running_deviation(Portfolio$Volume, 10)
 Portfolio$std_dev_vol_1M <- running_deviation(Portfolio$Volume, 20)
 Portfolio$std_dev_vol_2M <- running_deviation(Portfolio$Volume, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_vol_1W, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Week Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
   geom_line(aes(y = std_dev_vol_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
-  scale_y_continuous( labels = label_comma()) +
+  scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_vol_1M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 1-Month Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
+  theme_dark()
+ggplot(data = Portfolio, aes(x=Date)) +
+  geom_line(aes(y = std_dev_vol_2M, color = 'red')) +
+  ylab('USD') + 
+  ggtitle("Portfolio: 2-Month Standard Deviation of Return") +
+  scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
   theme_dark()
 ```
 
@@ -1248,22 +559,6 @@ While having a large array of predictors is in some sense useful for seeing the 
 Ultimately, in order to achieve a good understanding of the correlations between all of our predictors we will need to cross examine several subsets of our predictors to see which predictors are correlated for a single stock, and which predictors are useful for measuring competition between stocks. Dividing our correlation plots into two types, we first examine how the predictors are correlated for a **fixed** stock, and test this underlying trend accross a subset of our stocks (ASML, INTC, NVDA, and NXPI ):
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
-select(SSD, starts_with("INTC")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="INTC Correlation Plot")
-
-select(SSD, starts_with("NXPI")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="NXPI Correlation Plot")
-
-select(SSD, starts_with("NVDA")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="NVDA Correlation Plot")
-
-select(SSD, starts_with("ASML")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="ASML Correlation Plot")
-
 select(Portfolio, is.numeric) %>%
   cor() %>% 
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="Portfolio Correlation Plot")
@@ -1273,23 +568,6 @@ From the analysis above, we can somewhat immediately conclude that five of our s
 With the predictors for a fixed stock thoroughly analyzed, the next important subset of predictors to cross-examine is when the predictor *type* is fixed and the stock itself is allowed to vary. As we saw from the correlation plots above, several of our predictors for a fixed stock are closely related to one another — thus, there isn't any reason to examine all 13 predictors across our different manufacturers. Instead, we focus on a subset that has minimal pairwise-correlation: Volume, 2-Week Average (Closing) Price, 2-Week Standard Deviation, and 2-Week Normalized Volatility.
 
 
-```{r include = TRUE, warning = FALSE, message = FALSE,  fig.show="hold", out.width="50%"}
-select(SSD, ends_with("avg_vol_2W")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="Volumes")
-
-select(SSD, ends_with("avg_cl_2W")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Averages")
-
-select(SSD, ends_with("std_dev_cl_2W")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Standard Deviations")
-
-select(SSD, ends_with("avg_ret_2W")) %>%
-  cor() %>%
-  corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Normalized Volatilities")
-```
 There are a few key takeaways from this correlation analysis; foremost, there is not a significant relationship in the volume of stocks sold between any two companies (besides possibly TXN and NXPI). Second, the fact that most manufacturers' closing stock prices are heavily correlated means they are much more heavily affected by the overall market trends than competitors' actions — however, there is one exception to this trend: ON Semiconductor Corporation. Lastly, 
 
 
@@ -1305,69 +583,63 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-SSD_split_1W <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_1W)
-SSD_train_1W <- training(SSD_split_1W)
-SSD_test_1W <- testing(SSD_split_1W)
+Portfolio_split_1W <- initial_split(Portfolio, prop = 0.7,
+                                strata = avg_cl_1W)
+Portfolio_train_1W <- training(Portfolio_split_1W)
+Portfolio_test_1W <- testing(Portfolio_split_1W)
 
 
-SSD_split_2W <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_2W)
-SSD_train_2W <- training(SSD_split_2W)
-SSD_test_2W <- testing(SSD_split_2W)
-
-
-
-SSD_split_1M <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_1M)
-SSD_train_1M <- training(SSD_split_1M)
-SSD_test_1M <- testing(SSD_split_1M)
+Portfolio_split_2W <- initial_split(Portfolio, prop = 0.7,
+                                strata = avg_cl_2W)
+Portfolio_train_2W <- training(Portfolio_split_2W)
+Portfolio_test_2W <- testing(Portfolio_split_2W)
 
 
 
-SSD_split_2M <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_2M)
-SSD_train_2M <- training(SSD_split_2M)
-SSD_test_2M <- testing(SSD_split_2M)
+Portfolio_split_1M <- initial_split(Portfolio, prop = 0.7,
+                                strata = avg_cl_1M)
+Portfolio_train_1M <- training(Portfolio_split_1M)
+Portfolio_test_1M <- testing(Portfolio_split_1M)
 
+
+
+Portfolio_split_2M <- initial_split(Portfolio, prop = 0.7,
+                                strata = avg_cl_2M)
+Portfolio_train_2M <- training(Portfolio_split_2M)
+Portfolio_test_2M <- testing(Portfolio_split_2M)
 ```
 
 
 ## One-Week Model Fitting
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
- SSD_recipe_1W = recipe(
-   NVDA_avg_cl_1W ~ NVDA_std_dev_cl_1W + NVDA_avg_ret_1W + NVDA_std_dev_ret_1W + NVDA_avg_vol_1W + NVDA_std_dev_vol_1W +
-     TSM_avg_cl_1W + TSM_std_dev_cl_1W + TSM_avg_ret_1W + TSM_std_dev_ret_1W + TSM_avg_vol_1W + TSM_std_dev_vol_1W +
-     NXPI_avg_cl_1W + NXPI_std_dev_cl_1W + NXPI_avg_ret_1W + NXPI_std_dev_ret_1W + NXPI_avg_vol_1W + NXPI_std_dev_vol_1W + QCOM_avg_cl_1W + QCOM_std_dev_cl_1W + QCOM_avg_ret_1W + QCOM_std_dev_ret_1W + QCOM_avg_vol_1W + QCOM_std_dev_vol_1W + MPWR_avg_cl_1W + MPWR_std_dev_cl_1W + MPWR_avg_ret_1W + MPWR_std_dev_ret_1W + MPWR_avg_vol_1W + MPWR_std_dev_vol_1W + ON_avg_cl_1W + ON_std_dev_cl_1W + ON_avg_ret_1W + ON_std_dev_ret_1W + ON_avg_vol_1W + ON_std_dev_vol_1W + AMD_avg_cl_1W + AMD_std_dev_cl_1W + AMD_avg_ret_1W + AMD_std_dev_ret_1W + AMD_avg_vol_1W + AMD_std_dev_vol_1W + INTC_avg_cl_1W + INTC_std_dev_cl_1W + INTC_avg_ret_1W + INTC_std_dev_ret_1W + INTC_avg_vol_1W + INTC_std_dev_vol_1W + AVGO_avg_cl_1W + AVGO_std_dev_cl_1W + AVGO_avg_ret_1W + AVGO_std_dev_ret_1W + AVGO_avg_vol_1W + AVGO_std_dev_vol_1W + ASML_avg_cl_1W + ASML_std_dev_cl_1W + ASML_avg_ret_1W + ASML_std_dev_ret_1W + ASML_avg_vol_1W + ASML_std_dev_vol_1W + AMAT_avg_cl_1W + AMAT_std_dev_cl_1W + AMAT_avg_ret_1W + AMAT_std_dev_ret_1W + AMAT_avg_vol_1W + AMAT_std_dev_vol_1W + TXN_avg_cl_1W + TXN_std_dev_cl_1W + TXN_avg_ret_1W + TXN_std_dev_ret_1W + TXN_avg_vol_1W + TXN_std_dev_vol_1W,
-                     data=SSD_train_1W) %>%
+ Portfolio_recipe_1W = recipe(avg_cl_1W ~ std_dev_cl_1W +
+                                avg_ret_1W + std_dev_ret_1W +
+                                avg_vol_1W + std_dev_vol_1W,
+                     data=Portfolio_train_1W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
- SSD_recipe_2W = recipe(
-   NVDA_avg_cl_2W ~ NVDA_std_dev_cl_2W + NVDA_avg_ret_2W + NVDA_std_dev_ret_2W + NVDA_avg_vol_2W + NVDA_std_dev_vol_2W +
-     TSM_avg_cl_2W + TSM_std_dev_cl_2W + TSM_avg_ret_2W + TSM_std_dev_ret_2W + TSM_avg_vol_2W + TSM_std_dev_vol_2W +
-     NXPI_avg_cl_2W + NXPI_std_dev_cl_2W + NXPI_avg_ret_2W + NXPI_std_dev_ret_2W + NXPI_avg_vol_2W + NXPI_std_dev_vol_2W + QCOM_avg_cl_2W + QCOM_std_dev_cl_2W + QCOM_avg_ret_2W + QCOM_std_dev_ret_2W + QCOM_avg_vol_2W + QCOM_std_dev_vol_2W + MPWR_avg_cl_2W + MPWR_std_dev_cl_2W + MPWR_avg_ret_2W + MPWR_std_dev_ret_2W + MPWR_avg_vol_2W + MPWR_std_dev_vol_2W + ON_avg_cl_2W + ON_std_dev_cl_2W + ON_avg_ret_2W + ON_std_dev_ret_2W + ON_avg_vol_2W + ON_std_dev_vol_2W + AMD_avg_cl_2W + AMD_std_dev_cl_2W + AMD_avg_ret_2W + AMD_std_dev_ret_2W + AMD_avg_vol_2W + AMD_std_dev_vol_2W + INTC_avg_cl_2W + INTC_std_dev_cl_2W + INTC_avg_ret_2W + INTC_std_dev_ret_2W + INTC_avg_vol_2W + INTC_std_dev_vol_2W + AVGO_avg_cl_2W + AVGO_std_dev_cl_2W + AVGO_avg_ret_2W + AVGO_std_dev_ret_2W + AVGO_avg_vol_2W + AVGO_std_dev_vol_2W + ASML_avg_cl_2W + ASML_std_dev_cl_2W + ASML_avg_ret_2W + ASML_std_dev_ret_2W + ASML_avg_vol_2W + ASML_std_dev_vol_2W + AMAT_avg_cl_2W + AMAT_std_dev_cl_2W + AMAT_avg_ret_2W + AMAT_std_dev_ret_2W + AMAT_avg_vol_2W + AMAT_std_dev_vol_2W + TXN_avg_cl_2W + TXN_std_dev_cl_2W + TXN_avg_ret_2W + TXN_std_dev_ret_2W + TXN_avg_vol_2W + TXN_std_dev_vol_2W,
-                     data=SSD_train_2W) %>%
+ Portfolio_recipe_2W = recipe(avg_cl_2W ~ std_dev_cl_2W +
+                                avg_ret_2W + std_dev_ret_2W +
+                                avg_vol_2W + std_dev_vol_2W,
+                     data=Portfolio_train_2W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
-  SSD_recipe_1M = recipe(
-   NVDA_avg_cl_1M ~ NVDA_std_dev_cl_1M + NVDA_avg_ret_1M + NVDA_std_dev_ret_1M + NVDA_avg_vol_1M + NVDA_std_dev_vol_1M +
-     TSM_avg_cl_1M + TSM_std_dev_cl_1M + TSM_avg_ret_1M + TSM_std_dev_ret_1M + TSM_avg_vol_1M + TSM_std_dev_vol_1M +
-     NXPI_avg_cl_1M + NXPI_std_dev_cl_1M + NXPI_avg_ret_1M + NXPI_std_dev_ret_1M + NXPI_avg_vol_1M + NXPI_std_dev_vol_1M + QCOM_avg_cl_1M + QCOM_std_dev_cl_1M + QCOM_avg_ret_1M + QCOM_std_dev_ret_1M + QCOM_avg_vol_1M + QCOM_std_dev_vol_1M + MPWR_avg_cl_1M + MPWR_std_dev_cl_1M + MPWR_avg_ret_1M + MPWR_std_dev_ret_1M + MPWR_avg_vol_1M + MPWR_std_dev_vol_1M + ON_avg_cl_1M + ON_std_dev_cl_1M + ON_avg_ret_1M + ON_std_dev_ret_1M + ON_avg_vol_1M + ON_std_dev_vol_1M + AMD_avg_cl_1M + AMD_std_dev_cl_1M + AMD_avg_ret_1M + AMD_std_dev_ret_1M + AMD_avg_vol_1M + AMD_std_dev_vol_1M + INTC_avg_cl_1M + INTC_std_dev_cl_1M + INTC_avg_ret_1M + INTC_std_dev_ret_1M + INTC_avg_vol_1M + INTC_std_dev_vol_1M + AVGO_avg_cl_1M + AVGO_std_dev_cl_1M + AVGO_avg_ret_1M + AVGO_std_dev_ret_1M + AVGO_avg_vol_1M + AVGO_std_dev_vol_1M + ASML_avg_cl_1M + ASML_std_dev_cl_1M + ASML_avg_ret_1M + ASML_std_dev_ret_1M + ASML_avg_vol_1M + ASML_std_dev_vol_1M + AMAT_avg_cl_1M + AMAT_std_dev_cl_1M + AMAT_avg_ret_1M + AMAT_std_dev_ret_1M + AMAT_avg_vol_1M + AMAT_std_dev_vol_1M + TXN_avg_cl_1M + TXN_std_dev_cl_1M + TXN_avg_ret_1M + TXN_std_dev_ret_1M + TXN_avg_vol_1M + TXN_std_dev_vol_1M,
-                     data=SSD_train_1M) %>%
+ Portfolio_recipe_1M = recipe(avg_cl_1M ~ std_dev_cl_1M +
+                                avg_ret_1M + std_dev_ret_1M +
+                                avg_vol_1M + std_dev_vol_1M,
+                     data=Portfolio_train_1M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
   
-   SSD_recipe_2M = recipe(
-   NVDA_avg_cl_2M ~ NVDA_std_dev_cl_2M + NVDA_avg_ret_2M + NVDA_std_dev_ret_2M + NVDA_avg_vol_2M + NVDA_std_dev_vol_2M +
-     TSM_avg_cl_2M + TSM_std_dev_cl_2M + TSM_avg_ret_2M + TSM_std_dev_ret_2M + TSM_avg_vol_2M + TSM_std_dev_vol_2M +
-     NXPI_avg_cl_2M + NXPI_std_dev_cl_2M + NXPI_avg_ret_2M + NXPI_std_dev_ret_2M + NXPI_avg_vol_2M + NXPI_std_dev_vol_2M + QCOM_avg_cl_2M + QCOM_std_dev_cl_2M + QCOM_avg_ret_2M + QCOM_std_dev_ret_2M + QCOM_avg_vol_2M + QCOM_std_dev_vol_2M + MPWR_avg_cl_2M + MPWR_std_dev_cl_2M + MPWR_avg_ret_2M + MPWR_std_dev_ret_2M + MPWR_avg_vol_2M + MPWR_std_dev_vol_2M + ON_avg_cl_2M + ON_std_dev_cl_2M + ON_avg_ret_2M + ON_std_dev_ret_2M + ON_avg_vol_2M + ON_std_dev_vol_2M + AMD_avg_cl_2M + AMD_std_dev_cl_2M + AMD_avg_ret_2M + AMD_std_dev_ret_2M + AMD_avg_vol_2M + AMD_std_dev_vol_2M + INTC_avg_cl_2M + INTC_std_dev_cl_2M + INTC_avg_ret_2M + INTC_std_dev_ret_2M + INTC_avg_vol_2M + INTC_std_dev_vol_2M + AVGO_avg_cl_2M + AVGO_std_dev_cl_2M + AVGO_avg_ret_2M + AVGO_std_dev_ret_2M + AVGO_avg_vol_2M + AVGO_std_dev_vol_2M + ASML_avg_cl_2M + ASML_std_dev_cl_2M + ASML_avg_ret_2M + ASML_std_dev_ret_2M + ASML_avg_vol_2M + ASML_std_dev_vol_2M + AMAT_avg_cl_2M + AMAT_std_dev_cl_2M + AMAT_avg_ret_2M + AMAT_std_dev_ret_2M + AMAT_avg_vol_2M + AMAT_std_dev_vol_2M + TXN_avg_cl_2M + TXN_std_dev_cl_2M + TXN_avg_ret_2M + TXN_std_dev_ret_2M + TXN_avg_vol_2M + TXN_std_dev_vol_2M,
-                     data=SSD_train_2M) %>%
+ Portfolio_recipe_2M = recipe(avg_cl_2M ~ std_dev_cl_2M +
+                                avg_ret_2M + std_dev_ret_2M +
+                                avg_vol_2M + std_dev_vol_2M,
+                     data=Portfolio_train_2M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
-
 ```
 
 
@@ -1375,10 +647,10 @@ SSD_test_2M <- testing(SSD_split_2M)
 ## k-Fold Cross Validation
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-SSD_folds_1W <- vfold_cv(SSD_train_1W, v = 10, strata = NVDA_avg_cl_1W)
-SSD_folds_2W <- vfold_cv(SSD_train_2W, v = 10, strata = NVDA_avg_cl_2W)
-SSD_folds_1M <- vfold_cv(SSD_train_1M, v = 10, strata = NVDA_avg_cl_1M)
-SSD_folds_2M <- vfold_cv(SSD_train_2M, v = 10, strata = NVDA_avg_cl_2M)
+Portfolio_folds_1W <- vfold_cv(Portfolio_train_1W, v = 10, strata = avg_cl_1W)
+Portfolio_folds_2W <- vfold_cv(Portfolio_train_2W, v = 10, strata = avg_cl_2W)
+Portfolio_folds_1M <- vfold_cv(Portfolio_train_1M, v = 10, strata = avg_cl_1M)
+Portfolio_folds_2M <- vfold_cv(Portfolio_train_2M, v = 10, strata = avg_cl_2M)
 ```
 
 
@@ -1423,72 +695,72 @@ knn_model <- nearest_neighbor(neighbors = tune()) %>%
 # Linear Regression Workflows 
 lm_wflow_1W <- workflow() %>% 
   add_model(lm_model) %>% 
-  add_recipe(SSD_recipe_1W)
+  add_recipe(Portfolio_recipe_1W)
 lm_wflow_2W <- workflow() %>% 
   add_model(lm_model) %>% 
-  add_recipe(SSD_recipe_2W)
+  add_recipe(Portfolio_recipe_2W)
 lm_wflow_1M <- workflow() %>% 
   add_model(lm_model) %>% 
-  add_recipe(SSD_recipe_1M)
+  add_recipe(Portfolio_recipe_1M)
 lm_wflow_2M <- workflow() %>% 
   add_model(lm_model) %>% 
-  add_recipe(SSD_recipe_2M)
+  add_recipe(Portfolio_recipe_2M)
 
 # Ridge Regression Workflows
 ridge_wflow_1W <- workflow() %>% 
   add_model(ridge_model) %>% 
-  add_recipe(SSD_recipe_1W)
+  add_recipe(Portfolio_recipe_1W)
 ridge_wflow_2W <- workflow() %>% 
   add_model(ridge_model) %>% 
-  add_recipe(SSD_recipe_2W)
+  add_recipe(Portfolio_recipe_2W)
 ridge_wflow_1M <- workflow() %>% 
   add_model(ridge_model) %>% 
-  add_recipe(SSD_recipe_1M)
+  add_recipe(Portfolio_recipe_1M)
 ridge_wflow_2M <- workflow() %>% 
   add_model(ridge_model) %>% 
-  add_recipe(SSD_recipe_2M)
+  add_recipe(Portfolio_recipe_2M)
 
 # Lasso Regression Workflows
 lasso_wflow_1W <- workflow() %>% 
   add_model(lasso_model) %>% 
-  add_recipe(SSD_recipe_1W)
+  add_recipe(Portfolio_recipe_1W)
 lasso_wflow_2W <- workflow() %>% 
   add_model(lasso_model) %>% 
-  add_recipe(SSD_recipe_2W)
+  add_recipe(Portfolio_recipe_2W)
 lasso_wflow_1M <- workflow() %>% 
   add_model(lasso_model) %>% 
-  add_recipe(SSD_recipe_1M)
+  add_recipe(Portfolio_recipe_1M)
 lasso_wflow_2M <- workflow() %>% 
   add_model(lasso_model) %>% 
-  add_recipe(SSD_recipe_2M)
+  add_recipe(Portfolio_recipe_2M)
 
 # Elastic Net Workflows
 elastic_net_wflow_1W <- workflow() %>% 
   add_model(elastic_net_model) %>% 
-  add_recipe(SSD_recipe_1W)
+  add_recipe(Portfolio_recipe_1W)
 elastic_net_wflow_2W <- workflow() %>% 
   add_model(elastic_net_model) %>% 
-  add_recipe(SSD_recipe_2W)
+  add_recipe(Portfolio_recipe_2W)
 elastic_net_wflow_1M <- workflow() %>% 
   add_model(elastic_net_model) %>% 
-  add_recipe(SSD_recipe_1M)
+  add_recipe(Portfolio_recipe_1M)
 elastic_net_wflow_2M <- workflow() %>% 
   add_model(elastic_net_model) %>% 
-  add_recipe(SSD_recipe_2M)
+  add_recipe(Portfolio_recipe_2M)
 
 # k-Nearest Neighbors Workflows
 knn_wflow_1W <- workflow() %>% 
   add_model(knn_model) %>% 
-  add_recipe(SSD_recipe_1W)
+  add_recipe(Portfolio_recipe_1W)
 knn_wflow_2W <- workflow() %>% 
   add_model(knn_model) %>% 
-  add_recipe(SSD_recipe_2W)
+  add_recipe(Portfolio_recipe_2W)
 knn_wflow_1M <- workflow() %>% 
   add_model(knn_model) %>% 
-  add_recipe(SSD_recipe_1M)
+  add_recipe(Portfolio_recipe_1M)
 knn_wflow_2M <- workflow() %>% 
   add_model(knn_model) %>% 
-  add_recipe(SSD_recipe_2M)
+  add_recipe(Portfolio_recipe_2M)
 ```
 
 
@@ -1520,7 +792,7 @@ Tune Parameters for 1-Week Recipe
 # Find optimal parameters for ridge regression
 ridge_tune_1W <- tune_grid(
   ridge_wflow_1W,
-  resamples = SSD_folds_1W,
+  resamples = Portfolio_folds_1W,
   grid = no_mixture_grid
 )
 ridge_final_wflow_1W <- select_best(ridge_tune_1W, metric="rmse" ) %>%
@@ -1529,7 +801,7 @@ ridge_final_wflow_1W <- select_best(ridge_tune_1W, metric="rmse" ) %>%
 # Find optimal parameters for lasso regression
 lasso_tune_1W <- tune_grid(
   lasso_wflow_1W,
-  resamples = SSD_folds_1W,
+  resamples = Portfolio_folds_1W,
   grid = no_mixture_grid
 )
 lasso_final_wflow_1W <- select_best(lasso_tune_1W, metric="rmse") %>%
@@ -1538,7 +810,7 @@ lasso_final_wflow_1W <- select_best(lasso_tune_1W, metric="rmse") %>%
 # Find optimal parameters for Elastic Net
 elastic_net_tune_1W <- tune_grid(
   elastic_net_wflow_1W,
-  resamples = SSD_folds_1W,
+  resamples = Portfolio_folds_1W,
   grid = elastic_net_grid
 )
 elastic_net_final_wflow_1W <- select_best(elastic_net_tune_1W, metric = "rmse") %>% 
@@ -1547,7 +819,7 @@ elastic_net_final_wflow_1W <- select_best(elastic_net_tune_1W, metric = "rmse") 
 # Find optimal parameters for k-Nearest Neighbors
 knn_tune_1W <- tune_grid(
     knn_wflow_1W,
-    resamples = SSD_folds_1W,
+    resamples = Portfolio_folds_1W,
     grid = knn_grid
 )
 knn_final_wflow_1W <- select_best(knn_tune_1W, metric = "rmse") %>%
@@ -1562,7 +834,7 @@ Tune Parameters for 2-Week Recipe
 # Find optimal parameters for ridge regression
 ridge_tune_2W <- tune_grid(
   ridge_wflow_2W,
-  resamples = SSD_folds_2W,
+  resamples = Portfolio_folds_2W,
   grid = no_mixture_grid
 )
 ridge_final_wflow_2W <- select_best(ridge_tune_2W, metric="rmse" ) %>%
@@ -1571,7 +843,7 @@ ridge_final_wflow_2W <- select_best(ridge_tune_2W, metric="rmse" ) %>%
 # Find optimal parameters for lasso regression
 lasso_tune_2W <- tune_grid(
   lasso_wflow_2W,
-  resamples = SSD_folds_2W,
+  resamples = Portfolio_folds_2W,
   grid = no_mixture_grid
 )
 lasso_final_wflow_2W <- select_best(lasso_tune_2W, metric="rmse") %>%
@@ -1580,7 +852,7 @@ lasso_final_wflow_2W <- select_best(lasso_tune_2W, metric="rmse") %>%
 # Find optimal parameters for Elastic Net
 elastic_net_tune_2W <- tune_grid(
   elastic_net_wflow_2W,
-  resamples = SSD_folds_2W,
+  resamples = Portfolio_folds_2W,
   grid = elastic_net_grid
 )
 elastic_net_final_wflow_2W <- select_best(elastic_net_tune_2W,  metric = "rmse") %>% 
@@ -1589,7 +861,7 @@ elastic_net_final_wflow_2W <- select_best(elastic_net_tune_2W,  metric = "rmse")
 # Find optimal parameters for k-Nearest Neighbors
 knn_tune_2W <- tune_grid(
     knn_wflow_2W,
-    resamples = SSD_folds_2W,
+    resamples = Portfolio_folds_2W,
     grid = knn_grid
 )
 knn_final_wflow_2W <- select_best(knn_tune_2W, metric = "rmse") %>% 
@@ -1602,7 +874,7 @@ Tune Parameters for 1-Month Recipe
 # Find optimal parameters for ridge regression
 ridge_tune_1M <- tune_grid(
   ridge_wflow_1M,
-  resamples = SSD_folds_1M,
+  resamples = Portfolio_folds_1M,
   grid = no_mixture_grid
 )
 ridge_final_wflow_1M <- select_best(ridge_tune_1M, metric="rmse" ) %>% 
@@ -1611,7 +883,7 @@ ridge_final_wflow_1M <- select_best(ridge_tune_1M, metric="rmse" ) %>%
 # Find optimal parameters for lasso regression
 lasso_tune_1M <- tune_grid(
   lasso_wflow_1M,
-  resamples = SSD_folds_1M,
+  resamples = Portfolio_folds_1M,
   grid = no_mixture_grid
 )
 lasso_final_wflow_1M <- select_best(lasso_tune_1M, metric="rmse") %>%
@@ -1620,7 +892,7 @@ lasso_final_wflow_1M <- select_best(lasso_tune_1M, metric="rmse") %>%
 # Find optimal parameters for Elastic Net
 elastic_net_tune_1M <- tune_grid(
   elastic_net_wflow_1M,
-  resamples = SSD_folds_1M,
+  resamples = Portfolio_folds_1M,
   grid = elastic_net_grid
 )
 elastic_net_final_wflow_1M <- select_best(elastic_net_tune_1M, metric = "rmse") %>% 
@@ -1629,7 +901,7 @@ elastic_net_final_wflow_1M <- select_best(elastic_net_tune_1M, metric = "rmse") 
 # Find optimal parameters for k-Nearest Neighbors
 knn_tune_1M <- tune_grid(
     knn_wflow_1M,
-    resamples = SSD_folds_1M,
+    resamples = Portfolio_folds_1M,
     grid = knn_grid
 )
 knn_final_wflow_1M <- select_best(knn_tune_1M, metric = "rmse") %>%
@@ -1642,7 +914,7 @@ Tune Parameters for 2-Month Recipe
 # Find optimal parameters for ridge regression
 ridge_tune_2M <- tune_grid(
   ridge_wflow_2M,
-  resamples = SSD_folds_2M,
+  resamples = Portfolio_folds_2M,
   grid = no_mixture_grid
 )
 ridge_final_wflow_2M <-  select_best(ridge_tune_2M, metric="rmse" ) %>%
@@ -1651,7 +923,7 @@ ridge_final_wflow_2M <-  select_best(ridge_tune_2M, metric="rmse" ) %>%
 # Find optimal parameters for lasso regression
 lasso_tune_2M <- tune_grid(
   lasso_wflow_2M,
-  resamples = SSD_folds_2M,
+  resamples = Portfolio_folds_2M,
   grid = no_mixture_grid
 )
 lasso_final_wflow_2M <-select_best(lasso_tune_2M, metric="rmse") %>%
@@ -1660,7 +932,7 @@ lasso_final_wflow_2M <-select_best(lasso_tune_2M, metric="rmse") %>%
 # Find optimal parameters for Elastic Net
 elastic_net_tune_2M <- tune_grid(
   elastic_net_wflow_2M,
-  resamples = SSD_folds_2M,
+  resamples = Portfolio_folds_2M,
   grid = elastic_net_grid
 )
 elastic_net_final_wflow_2M <- select_best(elastic_net_tune_2M, metric = "rmse") %>%
@@ -1670,7 +942,7 @@ elastic_net_final_wflow_2M <- select_best(elastic_net_tune_2M, metric = "rmse") 
 # Find optimal parameters for k-Nearest Neighbors
 knn_tune_2M <- tune_grid(
     knn_wflow_2M,
-    resamples = SSD_folds_2M,
+    resamples = Portfolio_folds_2M,
     grid = knn_grid
 )
 knn_final_wflow_2M <- select_best(knn_tune_2M, metric = "rmse") %>%
@@ -1682,34 +954,34 @@ knn_final_wflow_2M <- select_best(knn_tune_2M, metric = "rmse") %>%
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Fits
-lm_fit_1W <- fit(lm_wflow_1W, SSD_train_1W)
-lm_fit_2W <- fit(lm_wflow_2W, SSD_train_2W)
-lm_fit_1M <- fit(lm_wflow_1M, SSD_train_1M)
-lm_fit_2M <- fit(lm_wflow_2M, SSD_train_2M)
+lm_fit_1W <- fit(lm_wflow_1W, Portfolio_train_1W)
+lm_fit_2W <- fit(lm_wflow_2W, Portfolio_train_2W)
+lm_fit_1M <- fit(lm_wflow_1M, Portfolio_train_1M)
+lm_fit_2M <- fit(lm_wflow_2M, Portfolio_train_2M)
 
 # Ridge Regression Fits
-ridge_fit_1W <- fit(ridge_final_wflow_1W, SSD_train_1W)
-ridge_fit_2W <- fit(ridge_final_wflow_2W, SSD_train_2W)
-ridge_fit_1M <- fit(ridge_final_wflow_1M, SSD_train_1M)
-ridge_fit_2M <- fit(ridge_final_wflow_2M, SSD_train_2M)
+ridge_fit_1W <- fit(ridge_final_wflow_1W, Portfolio_train_1W)
+ridge_fit_2W <- fit(ridge_final_wflow_2W, Portfolio_train_2W)
+ridge_fit_1M <- fit(ridge_final_wflow_1M, Portfolio_train_1M)
+ridge_fit_2M <- fit(ridge_final_wflow_2M, Portfolio_train_2M)
 
 # Lasso Regression Fits
-lasso_fit_1W <- fit(lasso_final_wflow_1W, SSD_train_1W)
-lasso_fit_2W <- fit(lasso_final_wflow_2W, SSD_train_2W)
-lasso_fit_1M <- fit(lasso_final_wflow_1M, SSD_train_1M)
-lasso_fit_2M <- fit(lasso_final_wflow_2M, SSD_train_2M)
+lasso_fit_1W <- fit(lasso_final_wflow_1W, Portfolio_train_1W)
+lasso_fit_2W <- fit(lasso_final_wflow_2W, Portfolio_train_2W)
+lasso_fit_1M <- fit(lasso_final_wflow_1M, Portfolio_train_1M)
+lasso_fit_2M <- fit(lasso_final_wflow_2M, Portfolio_train_2M)
 
 # Elastic Net Fits
-elastic_net_fit_1W <- fit(elastic_net_final_wflow_1W, SSD_train_1W)
-elastic_net_fit_2W <- fit(elastic_net_final_wflow_2W, SSD_train_2W)
-elastic_net_fit_1M <- fit(elastic_net_final_wflow_1M, SSD_train_1M)
-elastic_net_fit_2M <- fit(elastic_net_final_wflow_2M, SSD_train_2M)
+elastic_net_fit_1W <- fit(elastic_net_final_wflow_1W, Portfolio_train_1W)
+elastic_net_fit_2W <- fit(elastic_net_final_wflow_2W, Portfolio_train_2W)
+elastic_net_fit_1M <- fit(elastic_net_final_wflow_1M, Portfolio_train_1M)
+elastic_net_fit_2M <- fit(elastic_net_final_wflow_2M, Portfolio_train_2M)
 
 # k-Nearest Neighbors Fit
-knn_fit_1W <- fit(knn_final_wflow_1W, SSD_train_1W)
-knn_fit_2W <- fit(knn_final_wflow_2W, SSD_train_2W)
-knn_fit_1M <- fit(knn_final_wflow_1M, SSD_train_1M)
-knn_fit_2M <- fit(knn_final_wflow_2M, SSD_train_2M)
+knn_fit_1W <- fit(knn_final_wflow_1W, Portfolio_train_1W)
+knn_fit_2W <- fit(knn_final_wflow_2W, Portfolio_train_2W)
+knn_fit_1M <- fit(knn_final_wflow_1M, Portfolio_train_1M)
+knn_fit_2M <- fit(knn_final_wflow_2M, Portfolio_train_2M)
 ```
 
 ### Model Results for predicting 1-Week Average of NVIDIA Stock Price
@@ -1718,71 +990,71 @@ knn_fit_2M <- fit(knn_final_wflow_2M, SSD_train_2M)
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Training 
-lm_train_res_1W <- predict(lm_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-lm_train_res_1W <- bind_cols(lm_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+lm_train_res_1W <- predict(lm_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
+lm_train_res_1W <- bind_cols(lm_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
 
-lm_train_res_2W <- predict(lm_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-lm_train_res_2W <- bind_cols(lm_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+lm_train_res_2W <- predict(lm_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
+lm_train_res_2W <- bind_cols(lm_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
 
-lm_train_res_1M <- predict(lm_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-lm_train_res_1M <- bind_cols(lm_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+lm_train_res_1M <- predict(lm_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
+lm_train_res_1M <- bind_cols(lm_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
 
-lm_train_res_2M <- predict(lm_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-lm_train_res_2M <- bind_cols(lm_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+lm_train_res_2M <- predict(lm_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
+lm_train_res_2M <- bind_cols(lm_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
 
 
 # Ridge Regression Training
-ridge_train_res_1W <- predict(ridge_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-ridge_train_res_1W <- bind_cols(ridge_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+ridge_train_res_1W <- predict(ridge_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
+ridge_train_res_1W <- bind_cols(ridge_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
 
-ridge_train_res_2W <- predict(ridge_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-ridge_train_res_2W <- bind_cols(ridge_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+ridge_train_res_2W <- predict(ridge_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
+ridge_train_res_2W <- bind_cols(ridge_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
 
-ridge_train_res_1M <- predict(ridge_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-ridge_train_res_1M <- bind_cols(ridge_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+ridge_train_res_1M <- predict(ridge_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
+ridge_train_res_1M <- bind_cols(ridge_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
 
-ridge_train_res_2M <- predict(ridge_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-ridge_train_res_2M <- bind_cols(ridge_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+ridge_train_res_2M <- predict(ridge_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
+ridge_train_res_2M <- bind_cols(ridge_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
 
 
 # Lasso Regression Training
-lasso_train_res_1W <- predict(lasso_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-lasso_train_res_1W <- bind_cols(lasso_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+lasso_train_res_1W <- predict(lasso_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
+lasso_train_res_1W <- bind_cols(lasso_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
 
-lasso_train_res_2W <- predict(lasso_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-lasso_train_res_2W <- bind_cols(lasso_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+lasso_train_res_2W <- predict(lasso_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
+lasso_train_res_2W <- bind_cols(lasso_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
 
-lasso_train_res_1M <- predict(lasso_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-lasso_train_res_1M <- bind_cols(lasso_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+lasso_train_res_1M <- predict(lasso_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
+lasso_train_res_1M <- bind_cols(lasso_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
 
-lasso_train_res_2M <- predict(lasso_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-lasso_train_res_2M <- bind_cols(lasso_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+lasso_train_res_2M <- predict(lasso_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
+lasso_train_res_2M <- bind_cols(lasso_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
 
 # Elastic Net Training
-elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
+elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
 
-elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
+elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
 
-elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
+elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
 
-elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
+elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
 
 # k-Nearest Neighbors Training
-knn_train_res_1W <- predict(knn_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-knn_train_res_1W <- bind_cols(knn_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+knn_train_res_1W <- predict(knn_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
+knn_train_res_1W <- bind_cols(knn_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
 
-knn_train_res_2W <- predict(knn_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-knn_train_res_2W <- bind_cols(knn_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+knn_train_res_2W <- predict(knn_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
+knn_train_res_2W <- bind_cols(knn_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
 
-knn_train_res_1M <- predict(knn_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-knn_train_res_1M <- bind_cols(knn_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+knn_train_res_1M <- predict(knn_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
+knn_train_res_1M <- bind_cols(knn_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
 
-knn_train_res_2M <- predict(knn_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+knn_train_res_2M <- predict(knn_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
+knn_train_res_2M <- bind_cols(knn_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
 ```
 
 
@@ -1792,26 +1064,26 @@ knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_avg
 Root Mean Square Error (RMSE) results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate)
        )
 ```
 
@@ -1820,25 +1092,25 @@ R^2 results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate)
        )
 ```
