@@ -498,7 +498,7 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
-### n-Day Standard Deviation
+### n-Day Standard Deviation of Closing Price
 
 With a concrete notion of the n-day average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
 
@@ -1662,7 +1662,10 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
                     (lasso_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
                     (elastic_net_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
                     (knn_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate)
-       )
+       ) %>% 
+  kable() %>% 
+  kable_styling(full_width = F) %>% 
+  scroll_box(width = "100%", height = "200px")
 ```
 
 
@@ -1690,5 +1693,8 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
                     (lasso_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
                     (elastic_net_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
                     (knn_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate)
-       )
+       ) %>% 
+  kable() %>% 
+  kable_styling(full_width = F) %>% 
+  scroll_box(width = "100%", height = "200px")
 ```
