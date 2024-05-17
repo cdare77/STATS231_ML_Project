@@ -51,7 +51,6 @@ All stock market data was obtained from [Yahoo Finance](https://finance.yahoo.co
 loadSymbols("AMD", from="2023-01-01")
 AMD = data.frame(AMD)
 chartSeries(AMD,TA=c(addVo(),addBBands(),addMACD()))
-
 ```
 
 
@@ -119,8 +118,6 @@ Ultimately, in order to achieve a good understanding of the correlations between
 select(AMD, is.numeric) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="INTC Correlation Plot")
-
-
 ```
  
 
