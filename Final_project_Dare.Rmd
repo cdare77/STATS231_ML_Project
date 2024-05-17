@@ -36,10 +36,12 @@ library(scales)
 library(glmnet)
 library(quantmod)
 library(dygraphs)
+library(tidyr)
 
 
 tidymodels_prefer()
 conflicted::conflicts_prefer(yardstick::rsq)
+conflicted::conflicts_prefer(dplyr::lag)
 set.seed(3435)
 ```
 
@@ -102,9 +104,75 @@ p
 
 
 
- 
+```{r include = TRUE, warning = FALSE, message = FALSE }
+AMD$AMD.Close_L1 <- lag(AMD$AMD.Close, 1)
+AMD$AMD.Close_L2 <- lag(AMD$AMD.Close, 2)
+AMD$AMD.Close_L3 <- lag(AMD$AMD.Close, 3)
+AMD$AMD.Close_L4 <- lag(AMD$AMD.Close, 4)
+AMD$AMD.Close_L5 <- lag(AMD$AMD.Close, 5)
+AMD$AMD.Close_L6 <- lag(AMD$AMD.Close, 6)
+AMD$AMD.Close_L7 <- lag(AMD$AMD.Close, 7)
+AMD$AMD.Close_L8 <- lag(AMD$AMD.Close, 8)
+AMD$AMD.Close_L9 <- lag(AMD$AMD.Close, 9)
+AMD$AMD.Close_L10 <- lag(AMD$AMD.Close, 10)
+AMD$AMD.Close_L11 <- lag(AMD$AMD.Close, 11)
+AMD$AMD.Close_L12 <- lag(AMD$AMD.Close, 12)
+AMD$AMD.Close_L13 <- lag(AMD$AMD.Close, 13)
+AMD$AMD.Close_L14 <- lag(AMD$AMD.Close, 14)
+AMD$AMD.Close_L15 <- lag(AMD$AMD.Close, 15)
+AMD$AMD.Close_L16 <- lag(AMD$AMD.Close, 16)
+AMD$AMD.Close_L17 <- lag(AMD$AMD.Close, 17)
+AMD$AMD.Close_L18 <- lag(AMD$AMD.Close, 18)
+AMD$AMD.Close_L19 <- lag(AMD$AMD.Close, 19)
+AMD$AMD.Close_L20 <- lag(AMD$AMD.Close, 20)
+AMD$AMD.Close_L21 <- lag(AMD$AMD.Close, 21)
+AMD$AMD.Close_L22 <- lag(AMD$AMD.Close, 22)
+AMD$AMD.Close_L23 <- lag(AMD$AMD.Close, 23)
+AMD$AMD.Close_L24 <- lag(AMD$AMD.Close, 24)
+AMD$AMD.Close_L25 <- lag(AMD$AMD.Close, 25)
+AMD$AMD.Close_L26 <- lag(AMD$AMD.Close, 26)
+AMD$AMD.Close_L27 <- lag(AMD$AMD.Close, 27)
+AMD$AMD.Close_L28 <- lag(AMD$AMD.Close, 28)
+AMD$AMD.Close_L29 <- lag(AMD$AMD.Close, 29)
 
 
+AMD <- AMD %>%
+  fill(AMD.Close_L1, .direction = "up") %>%
+  fill(AMD.Close_L2, .direction = "up") %>%
+  fill(AMD.Close_L3, .direction = "up") %>% 
+  fill(AMD.Close_L4, .direction = "up") %>% 
+  fill(AMD.Close_L5, .direction = "up") %>% 
+  fill(AMD.Close_L6, .direction = "up") %>% 
+  fill(AMD.Close_L7, .direction = "up") %>% 
+  fill(AMD.Close_L8, .direction = "up") %>% 
+  fill(AMD.Close_L9, .direction = "up") %>% 
+  fill(AMD.Close_L10, .direction = "up") %>% 
+  fill(AMD.Close_L11, .direction = "up") %>%
+  fill(AMD.Close_L12, .direction = "up") %>%
+  fill(AMD.Close_L13, .direction = "up") %>% 
+  fill(AMD.Close_L14, .direction = "up") %>% 
+  fill(AMD.Close_L15, .direction = "up") %>% 
+  fill(AMD.Close_L16, .direction = "up") %>% 
+  fill(AMD.Close_L17, .direction = "up") %>% 
+  fill(AMD.Close_L18, .direction = "up") %>% 
+  fill(AMD.Close_L19, .direction = "up") %>% 
+  fill(AMD.Close_L20, .direction = "up") %>%
+  fill(AMD.Close_L21, .direction = "up") %>%
+  fill(AMD.Close_L22, .direction = "up") %>%
+  fill(AMD.Close_L23, .direction = "up") %>% 
+  fill(AMD.Close_L24, .direction = "up") %>% 
+  fill(AMD.Close_L25, .direction = "up") %>% 
+  fill(AMD.Close_L26, .direction = "up") %>% 
+  fill(AMD.Close_L27, .direction = "up") %>% 
+  fill(AMD.Close_L28, .direction = "up") %>% 
+  fill(AMD.Close_L29, .direction = "up") 
+
+
+
+select(tail(AMD, -29), starts_with("AMD.Close")) %>%
+  cor() %>%
+  corrplot(method = "number", type = "lower", diag = FALSE, tl.cex=0.6, number.cex=0.35, title="INTC Correlation Plot")
+```
  
 
 
