@@ -290,17 +290,17 @@ Based on the above plots, one can also see that the semiconductor manufacturing 
 While the six predictors provided by Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our stocks. The main kind of variables we wish to introduce are ones which simply keep track of data from previous days; since each predictor in our original data frame only applies to a 24-hour window, there could be some potentially important information in the long-term trends of a stock which ultimately affect a share's price.
 
 
-### n-day Average of Closing Price
+### Simple Moving Average of Closing Price
 
 As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors. 
 
-While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the n-day average and the n-day standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the value of n is (in our n-day average) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
+While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the simple moving average and the simple moving standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the moving value is (i.e. the number of days averaged over) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
 
 Additionally, there is no clear choice for how much previous data to account for — should the analysis look back at a single week's worth of data or a month? As this is itself an interesting question for the sake of tuning our models, **we will consider this an added hyperparameter for the problem** and consider four possible values: 1 week, 2 weeks, 1 month, and 2 months.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 
-running_average <- function(my_vec, num_days) {
+simple_moving_average <- function(my_vec, num_days) {
   #' Takes the running average of a column vector
   #'
   #' Creates a new column vector whose entries are the average of the previous num_days entries.
@@ -317,16 +317,16 @@ running_average <- function(my_vec, num_days) {
   
   # Error handling
   if(is.vector(my_vec) == FALSE){
-    stop("Not Vector: First argument of running_average must be a vector")
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
   }
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
   if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
-    stop("Not Integer: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   if(num_days <= 1){
-    stop("Not Large Enough: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
 
   # dummy variable to keep track of sums
@@ -353,64 +353,64 @@ running_average <- function(my_vec, num_days) {
   return(output_vec)
 }
   
-SSD$NVDA_avg_cl_1W <- running_average(SSD$NVDA_Close, 5)
-SSD$TSM_avg_cl_1W <- running_average(SSD$TSM_Close, 5)
-SSD$NXPI_avg_cl_1W <- running_average(SSD$NXPI_Close, 5)
-SSD$QCOM_avg_cl_1W <- running_average(SSD$QCOM_Close, 5)
-SSD$MPWR_avg_cl_1W <- running_average(SSD$MPWR_Close, 5)
-SSD$ON_avg_cl_1W <- running_average(SSD$ON_Close, 5)
-SSD$AMD_avg_cl_1W <- running_average(SSD$AMD_Close, 5)
-SSD$INTC_avg_cl_1W <- running_average(SSD$INTC_Close, 5)
-SSD$AVGO_avg_cl_1W <- running_average(SSD$AVGO_Close, 5)
-SSD$ASML_avg_cl_1W <- running_average(SSD$ASML_Close, 5)
-SSD$AMAT_avg_cl_1W <- running_average(SSD$AMAT_Close, 5)
-SSD$TXN_avg_cl_1W <- running_average(SSD$TXN_Close, 5)
+SSD$NVDA_SMA_cl_1W <- simple_moving_average(SSD$NVDA_Close, 5)
+SSD$TSM_SMA_cl_1W <- simple_moving_average(SSD$TSM_Close, 5)
+SSD$NXPI_SMA_cl_1W <- simple_moving_average(SSD$NXPI_Close, 5)
+SSD$QCOM_SMA_cl_1W <- simple_moving_average(SSD$QCOM_Close, 5)
+SSD$MPWR_SMA_cl_1W <- simple_moving_average(SSD$MPWR_Close, 5)
+SSD$ON_SMA_cl_1W <- simple_moving_average(SSD$ON_Close, 5)
+SSD$AMD_SMA_cl_1W <- simple_moving_average(SSD$AMD_Close, 5)
+SSD$INTC_SMA_cl_1W <- simple_moving_average(SSD$INTC_Close, 5)
+SSD$AVGO_SMA_cl_1W <- simple_moving_average(SSD$AVGO_Close, 5)
+SSD$ASML_SMA_cl_1W <- simple_moving_average(SSD$ASML_Close, 5)
+SSD$AMAT_SMA_cl_1W <- simple_moving_average(SSD$AMAT_Close, 5)
+SSD$TXN_SMA_cl_1W <- simple_moving_average(SSD$TXN_Close, 5)
 
-SSD$NVDA_avg_cl_2W <- running_average(SSD$NVDA_Close, 10)
-SSD$TSM_avg_cl_2W <- running_average(SSD$TSM_Close, 10)
-SSD$NXPI_avg_cl_2W <- running_average(SSD$NXPI_Close, 10)
-SSD$QCOM_avg_cl_2W <- running_average(SSD$QCOM_Close, 10)
-SSD$MPWR_avg_cl_2W <- running_average(SSD$MPWR_Close, 10)
-SSD$ON_avg_cl_2W <- running_average(SSD$ON_Close, 10)
-SSD$AMD_avg_cl_2W <- running_average(SSD$AMD_Close, 10)
-SSD$INTC_avg_cl_2W <- running_average(SSD$INTC_Close, 10)
-SSD$AVGO_avg_cl_2W <- running_average(SSD$AVGO_Close, 10)
-SSD$ASML_avg_cl_2W <- running_average(SSD$ASML_Close, 10)
-SSD$AMAT_avg_cl_2W <- running_average(SSD$AMAT_Close, 10)
-SSD$TXN_avg_cl_2W <- running_average(SSD$TXN_Close, 10)
+SSD$NVDA_SMA_cl_2W <- simple_moving_average(SSD$NVDA_Close, 10)
+SSD$TSM_SMA_cl_2W <- simple_moving_average(SSD$TSM_Close, 10)
+SSD$NXPI_SMA_cl_2W <- simple_moving_average(SSD$NXPI_Close, 10)
+SSD$QCOM_SMA_cl_2W <- simple_moving_average(SSD$QCOM_Close, 10)
+SSD$MPWR_SMA_cl_2W <- simple_moving_average(SSD$MPWR_Close, 10)
+SSD$ON_SMA_cl_2W <- simple_moving_average(SSD$ON_Close, 10)
+SSD$AMD_SMA_cl_2W <- simple_moving_average(SSD$AMD_Close, 10)
+SSD$INTC_SMA_cl_2W <- simple_moving_average(SSD$INTC_Close, 10)
+SSD$AVGO_SMA_cl_2W <- simple_moving_average(SSD$AVGO_Close, 10)
+SSD$ASML_SMA_cl_2W <- simple_moving_average(SSD$ASML_Close, 10)
+SSD$AMAT_SMA_cl_2W <- simple_moving_average(SSD$AMAT_Close, 10)
+SSD$TXN_SMA_cl_2W <- simple_moving_average(SSD$TXN_Close, 10)
 
-SSD$NVDA_avg_cl_1M <- running_average(SSD$NVDA_Close, 20)
-SSD$TSM_avg_cl_1M <- running_average(SSD$TSM_Close, 20)
-SSD$NXPI_avg_cl_1M <- running_average(SSD$NXPI_Close, 20)
-SSD$QCOM_avg_cl_1M <- running_average(SSD$QCOM_Close, 20)
-SSD$MPWR_avg_cl_1M <- running_average(SSD$MPWR_Close, 20)
-SSD$ON_avg_cl_1M <- running_average(SSD$ON_Close, 20)
-SSD$AMD_avg_cl_1M <- running_average(SSD$AMD_Close, 20)
-SSD$INTC_avg_cl_1M <- running_average(SSD$INTC_Close, 20)
-SSD$AVGO_avg_cl_1M <- running_average(SSD$AVGO_Close, 20)
-SSD$ASML_avg_cl_1M <- running_average(SSD$ASML_Close, 20)
-SSD$AMAT_avg_cl_1M <- running_average(SSD$AMAT_Close, 20)
-SSD$TXN_avg_cl_1M <- running_average(SSD$TXN_Close, 20)
+SSD$NVDA_SMA_cl_1M <- simple_moving_average(SSD$NVDA_Close, 20)
+SSD$TSM_SMA_cl_1M <- simple_moving_average(SSD$TSM_Close, 20)
+SSD$NXPI_SMA_cl_1M <- simple_moving_average(SSD$NXPI_Close, 20)
+SSD$QCOM_SMA_cl_1M <- simple_moving_average(SSD$QCOM_Close, 20)
+SSD$MPWR_SMA_cl_1M <- simple_moving_average(SSD$MPWR_Close, 20)
+SSD$ON_SMA_cl_1M <- simple_moving_average(SSD$ON_Close, 20)
+SSD$AMD_SMA_cl_1M <- simple_moving_average(SSD$AMD_Close, 20)
+SSD$INTC_SMA_cl_1M <- simple_moving_average(SSD$INTC_Close, 20)
+SSD$AVGO_SMA_cl_1M <- simple_moving_average(SSD$AVGO_Close, 20)
+SSD$ASML_SMA_cl_1M <- simple_moving_average(SSD$ASML_Close, 20)
+SSD$AMAT_SMA_cl_1M <- simple_moving_average(SSD$AMAT_Close, 20)
+SSD$TXN_SMA_cl_1M <- simple_moving_average(SSD$TXN_Close, 20)
 
-SSD$NVDA_avg_cl_2M <- running_average(SSD$NVDA_Close, 40)
-SSD$TSM_avg_cl_2M <- running_average(SSD$TSM_Close, 40)
-SSD$NXPI_avg_cl_2M <- running_average(SSD$NXPI_Close, 40)
-SSD$QCOM_avg_cl_2M <- running_average(SSD$QCOM_Close, 40)
-SSD$MPWR_avg_cl_2M <- running_average(SSD$MPWR_Close, 40)
-SSD$ON_avg_cl_2M <- running_average(SSD$ON_Close, 40)
-SSD$AMD_avg_cl_2M <- running_average(SSD$AMD_Close, 40)
-SSD$INTC_avg_cl_2M <- running_average(SSD$INTC_Close, 40)
-SSD$AVGO_avg_cl_2M <- running_average(SSD$AVGO_Close, 40)
-SSD$ASML_avg_cl_2M <- running_average(SSD$ASML_Close, 40)
-SSD$AMAT_avg_cl_2M <- running_average(SSD$AMAT_Close, 40)
-SSD$TXN_avg_cl_2M <- running_average(SSD$TXN_Close, 40)
+SSD$NVDA_SMA_cl_2M <- simple_moving_average(SSD$NVDA_Close, 40)
+SSD$TSM_SMA_cl_2M <- simple_moving_average(SSD$TSM_Close, 40)
+SSD$NXPI_SMA_cl_2M <- simple_moving_average(SSD$NXPI_Close, 40)
+SSD$QCOM_SMA_cl_2M <- simple_moving_average(SSD$QCOM_Close, 40)
+SSD$MPWR_SMA_cl_2M <- simple_moving_average(SSD$MPWR_Close, 40)
+SSD$ON_SMA_cl_2M <- simple_moving_average(SSD$ON_Close, 40)
+SSD$AMD_SMA_cl_2M <- simple_moving_average(SSD$AMD_Close, 40)
+SSD$INTC_SMA_cl_2M <- simple_moving_average(SSD$INTC_Close, 40)
+SSD$AVGO_SMA_cl_2M <- simple_moving_average(SSD$AVGO_Close, 40)
+SSD$ASML_SMA_cl_2M <- simple_moving_average(SSD$ASML_Close, 40)
+SSD$AMAT_SMA_cl_2M <- simple_moving_average(SSD$AMAT_Close, 40)
+SSD$TXN_SMA_cl_2M <- simple_moving_average(SSD$TXN_Close, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_cl_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_cl_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_cl_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_cl_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMA_cl_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMA_cl_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMA_cl_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMA_cl_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -422,10 +422,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_cl_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_cl_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_cl_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_cl_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMA_cl_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMA_cl_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMA_cl_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMA_cl_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -436,10 +436,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_cl_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_cl_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_cl_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_cl_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMA_cl_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMA_cl_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMA_cl_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMA_cl_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -455,10 +455,10 @@ One characteristic that immediately becomes apparent is that evaluating the runn
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_cl_2M, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_cl_2M, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_cl_2M, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_cl_2M, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMA_cl_2M, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMA_cl_2M, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMA_cl_2M, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMA_cl_2M, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -470,10 +470,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_cl_2M, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_cl_2M, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_cl_2M, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_cl_2M, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMA_cl_2M, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMA_cl_2M, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMA_cl_2M, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMA_cl_2M, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -484,10 +484,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_cl_2M, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_cl_2M, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_cl_2M, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_cl_2M, color = 'TSM')) +
+  geom_line(aes(y = ON_SMA_cl_2M, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMA_cl_2M, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMA_cl_2M, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMA_cl_2M, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -498,12 +498,12 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
-### n-Day Standard Deviation of Closing Price
+### Simple Moving Standard Deviation of Closing Price
 
-With a concrete notion of the n-day average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-running_deviation <- function(my_vec, num_days) {
+simple_moving_deviation <- function(my_vec, num_days) {
   #' Takes the running standard deviation of a column vector
   #'
   #' Creates a new column vector whose entries are the standard deviation of the previous num_days entries.
@@ -520,20 +520,20 @@ running_deviation <- function(my_vec, num_days) {
   
   # Error handling
   if(is.vector(my_vec) == FALSE){
-    stop("Not Vector: First argument of running_average must be a vector")
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
   }
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
   if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
-    stop("Not Integer: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   if(num_days <= 1){
-    stop("Not Large Enough: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   
   
-  run_avg = running_average(my_vec, num_days)
+  run_avg = simple_moving_average(my_vec, num_days)
 
   # dummy variable to keep track of sums
   sum_counter = 0
@@ -564,64 +564,64 @@ running_deviation <- function(my_vec, num_days) {
   return(output_vec)
 }
 
-SSD$NVDA_std_dev_cl_1W <- running_deviation(SSD$NVDA_Close, 5)
-SSD$TSM_std_dev_cl_1W <- running_deviation(SSD$TSM_Close, 5)
-SSD$NXPI_std_dev_cl_1W <- running_deviation(SSD$NXPI_Close, 5)
-SSD$QCOM_std_dev_cl_1W <- running_deviation(SSD$QCOM_Close, 5)
-SSD$MPWR_std_dev_cl_1W <- running_deviation(SSD$MPWR_Close, 5)
-SSD$ON_std_dev_cl_1W <- running_deviation(SSD$ON_Close, 5)
-SSD$AMD_std_dev_cl_1W <- running_deviation(SSD$AMD_Close, 5)
-SSD$INTC_std_dev_cl_1W <- running_deviation(SSD$INTC_Close, 5)
-SSD$AVGO_std_dev_cl_1W <- running_deviation(SSD$AVGO_Close, 5)
-SSD$ASML_std_dev_cl_1W <- running_deviation(SSD$ASML_Close, 5)
-SSD$AMAT_std_dev_cl_1W <- running_deviation(SSD$AMAT_Close, 5)
-SSD$TXN_std_dev_cl_1W <- running_deviation(SSD$TXN_Close, 5)
+SSD$NVDA_SMSD_cl_1W <- simple_moving_deviation(SSD$NVDA_Close, 5)
+SSD$TSM_SMSD_cl_1W <- simple_moving_deviation(SSD$TSM_Close, 5)
+SSD$NXPI_SMSD_cl_1W <- simple_moving_deviation(SSD$NXPI_Close, 5)
+SSD$QCOM_SMSD_cl_1W <- simple_moving_deviation(SSD$QCOM_Close, 5)
+SSD$MPWR_SMSD_cl_1W <- simple_moving_deviation(SSD$MPWR_Close, 5)
+SSD$ON_SMSD_cl_1W <- simple_moving_deviation(SSD$ON_Close, 5)
+SSD$AMD_SMSD_cl_1W <- simple_moving_deviation(SSD$AMD_Close, 5)
+SSD$INTC_SMSD_cl_1W <- simple_moving_deviation(SSD$INTC_Close, 5)
+SSD$AVGO_SMSD_cl_1W <- simple_moving_deviation(SSD$AVGO_Close, 5)
+SSD$ASML_SMSD_cl_1W <- simple_moving_deviation(SSD$ASML_Close, 5)
+SSD$AMAT_SMSD_cl_1W <- simple_moving_deviation(SSD$AMAT_Close, 5)
+SSD$TXN_SMSD_cl_1W <- simple_moving_deviation(SSD$TXN_Close, 5)
 
-SSD$NVDA_std_dev_cl_2W <- running_deviation(SSD$NVDA_Close, 10)
-SSD$TSM_std_dev_cl_2W <- running_deviation(SSD$TSM_Close, 10)
-SSD$NXPI_std_dev_cl_2W <- running_deviation(SSD$NXPI_Close, 10)
-SSD$QCOM_std_dev_cl_2W <- running_deviation(SSD$QCOM_Close, 10)
-SSD$MPWR_std_dev_cl_2W <- running_deviation(SSD$MPWR_Close, 10)
-SSD$ON_std_dev_cl_2W <- running_deviation(SSD$ON_Close, 10)
-SSD$AMD_std_dev_cl_2W <- running_deviation(SSD$AMD_Close, 10)
-SSD$INTC_std_dev_cl_2W <- running_deviation(SSD$INTC_Close, 10)
-SSD$AVGO_std_dev_cl_2W <- running_deviation(SSD$AVGO_Close, 10)
-SSD$ASML_std_dev_cl_2W <- running_deviation(SSD$ASML_Close, 10)
-SSD$AMAT_std_dev_cl_2W <- running_deviation(SSD$AMAT_Close, 10)
-SSD$TXN_std_dev_cl_2W <- running_deviation(SSD$TXN_Close, 10)
+SSD$NVDA_SMSD_cl_2W <- simple_moving_deviation(SSD$NVDA_Close, 10)
+SSD$TSM_SMSD_cl_2W <- simple_moving_deviation(SSD$TSM_Close, 10)
+SSD$NXPI_SMSD_cl_2W <- simple_moving_deviation(SSD$NXPI_Close, 10)
+SSD$QCOM_SMSD_cl_2W <- simple_moving_deviation(SSD$QCOM_Close, 10)
+SSD$MPWR_SMSD_cl_2W <- simple_moving_deviation(SSD$MPWR_Close, 10)
+SSD$ON_SMSD_cl_2W <- simple_moving_deviation(SSD$ON_Close, 10)
+SSD$AMD_SMSD_cl_2W <- simple_moving_deviation(SSD$AMD_Close, 10)
+SSD$INTC_SMSD_cl_2W <- simple_moving_deviation(SSD$INTC_Close, 10)
+SSD$AVGO_SMSD_cl_2W <- simple_moving_deviation(SSD$AVGO_Close, 10)
+SSD$ASML_SMSD_cl_2W <- simple_moving_deviation(SSD$ASML_Close, 10)
+SSD$AMAT_SMSD_cl_2W <- simple_moving_deviation(SSD$AMAT_Close, 10)
+SSD$TXN_SMSD_cl_2W <- simple_moving_deviation(SSD$TXN_Close, 10)
 
-SSD$NVDA_std_dev_cl_1M <- running_deviation(SSD$NVDA_Close, 20)
-SSD$TSM_std_dev_cl_1M <- running_deviation(SSD$TSM_Close, 20)
-SSD$NXPI_std_dev_cl_1M <- running_deviation(SSD$NXPI_Close, 20)
-SSD$QCOM_std_dev_cl_1M <- running_deviation(SSD$QCOM_Close, 20)
-SSD$MPWR_std_dev_cl_1M <- running_deviation(SSD$MPWR_Close, 20)
-SSD$ON_std_dev_cl_1M <- running_deviation(SSD$ON_Close, 20)
-SSD$AMD_std_dev_cl_1M <- running_deviation(SSD$AMD_Close, 20)
-SSD$INTC_std_dev_cl_1M <- running_deviation(SSD$INTC_Close, 20)
-SSD$AVGO_std_dev_cl_1M <- running_deviation(SSD$AVGO_Close, 20)
-SSD$ASML_std_dev_cl_1M <- running_deviation(SSD$ASML_Close, 20)
-SSD$AMAT_std_dev_cl_1M <- running_deviation(SSD$AMAT_Close, 20)
-SSD$TXN_std_dev_cl_1M <- running_deviation(SSD$TXN_Close, 20)
+SSD$NVDA_SMSD_cl_1M <- simple_moving_deviation(SSD$NVDA_Close, 20)
+SSD$TSM_SMSD_cl_1M <- simple_moving_deviation(SSD$TSM_Close, 20)
+SSD$NXPI_SMSD_cl_1M <- simple_moving_deviation(SSD$NXPI_Close, 20)
+SSD$QCOM_SMSD_cl_1M <- simple_moving_deviation(SSD$QCOM_Close, 20)
+SSD$MPWR_SMSD_cl_1M <- simple_moving_deviation(SSD$MPWR_Close, 20)
+SSD$ON_SMSD_cl_1M <- simple_moving_deviation(SSD$ON_Close, 20)
+SSD$AMD_SMSD_cl_1M <- simple_moving_deviation(SSD$AMD_Close, 20)
+SSD$INTC_SMSD_cl_1M <- simple_moving_deviation(SSD$INTC_Close, 20)
+SSD$AVGO_SMSD_cl_1M <- simple_moving_deviation(SSD$AVGO_Close, 20)
+SSD$ASML_SMSD_cl_1M <- simple_moving_deviation(SSD$ASML_Close, 20)
+SSD$AMAT_SMSD_cl_1M <- simple_moving_deviation(SSD$AMAT_Close, 20)
+SSD$TXN_SMSD_cl_1M <- simple_moving_deviation(SSD$TXN_Close, 20)
 
-SSD$NVDA_std_dev_cl_2M <- running_deviation(SSD$NVDA_Close, 40)
-SSD$TSM_std_dev_cl_2M <- running_deviation(SSD$TSM_Close, 40)
-SSD$NXPI_std_dev_cl_2M <- running_deviation(SSD$NXPI_Close, 40)
-SSD$QCOM_std_dev_cl_2M <- running_deviation(SSD$QCOM_Close, 40)
-SSD$MPWR_std_dev_cl_2M <- running_deviation(SSD$MPWR_Close, 40)
-SSD$ON_std_dev_cl_2M <- running_deviation(SSD$ON_Close, 40)
-SSD$AMD_std_dev_cl_2M <- running_deviation(SSD$AMD_Close, 40)
-SSD$INTC_std_dev_cl_2M <- running_deviation(SSD$INTC_Close, 40)
-SSD$AVGO_std_dev_cl_2M <- running_deviation(SSD$AVGO_Close, 40)
-SSD$ASML_std_dev_cl_2M <- running_deviation(SSD$ASML_Close, 40)
-SSD$AMAT_std_dev_cl_2M <- running_deviation(SSD$AMAT_Close, 40)
-SSD$TXN_std_dev_cl_2M <- running_deviation(SSD$TXN_Close, 40)
+SSD$NVDA_SMSD_cl_2M <- simple_moving_deviation(SSD$NVDA_Close, 40)
+SSD$TSM_SMSD_cl_2M <- simple_moving_deviation(SSD$TSM_Close, 40)
+SSD$NXPI_SMSD_cl_2M <- simple_moving_deviation(SSD$NXPI_Close, 40)
+SSD$QCOM_SMSD_cl_2M <- simple_moving_deviation(SSD$QCOM_Close, 40)
+SSD$MPWR_SMSD_cl_2M <- simple_moving_deviation(SSD$MPWR_Close, 40)
+SSD$ON_SMSD_cl_2M <- simple_moving_deviation(SSD$ON_Close, 40)
+SSD$AMD_SMSD_cl_2M <- simple_moving_deviation(SSD$AMD_Close, 40)
+SSD$INTC_SMSD_cl_2M <- simple_moving_deviation(SSD$INTC_Close, 40)
+SSD$AVGO_SMSD_cl_2M <- simple_moving_deviation(SSD$AVGO_Close, 40)
+SSD$ASML_SMSD_cl_2M <- simple_moving_deviation(SSD$ASML_Close, 40)
+SSD$AMAT_SMSD_cl_2M <- simple_moving_deviation(SSD$AMAT_Close, 40)
+SSD$TXN_SMSD_cl_2M <- simple_moving_deviation(SSD$TXN_Close, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_cl_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_cl_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_cl_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_cl_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMSD_cl_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMSD_cl_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMSD_cl_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMSD_cl_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -633,10 +633,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_cl_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_cl_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_cl_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_cl_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMSD_cl_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMSD_cl_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMSD_cl_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMSD_cl_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -647,10 +647,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_cl_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_cl_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_cl_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_cl_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMSD_cl_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMSD_cl_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMSD_cl_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMSD_cl_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -663,7 +663,7 @@ ggplot(data = SSD, aes(x=Date)) +
 
  
 
-### n-Day Average Return
+### Simple Moving Average Return
 
 
 One of the main reasons someone invests in a stock is because they believe there is some sort of profit to be made based on the company's performance. On a day-to-day basis, this is simply measured by the difference between the closing price and the opening price — if the closing price is higher than the opening price, an investor theoretically increased their net worth that day (and vice versa). Although we are technically already measuring the average closing price, this does not account for possible downward trends since it is simply taking the average value of a set of prices; on the other hand, looking at the difference between opening and closing price gives some short-term insight into the overall trend of a stock on a daily basis.
@@ -672,78 +672,78 @@ One of the main reasons someone invests in a stock is because they believe there
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_Return <- (SSD$NVDA_Adj_Close - SSD$NVDA_Open)
-SSD$TSM_Return <- (SSD$TSM_Adj_Close - SSD$TSM_Open)
-SSD$NXPI_Return <- (SSD$NXPI_Adj_Close - SSD$NXPI_Open)
-SSD$QCOM_Return <- (SSD$QCOM_Adj_Close - SSD$QCOM_Open)
-SSD$MPWR_Return <- (SSD$MPWR_Adj_Close - SSD$MPWR_Open)
-SSD$ON_Return <- (SSD$ON_Adj_Close - SSD$ON_Open)
-SSD$AMD_Return <- (SSD$AMD_Adj_Close - SSD$AMD_Open)
-SSD$INTC_Return <- (SSD$INTC_Adj_Close - SSD$INTC_Open)
-SSD$AVGO_Return <- (SSD$AVGO_Adj_Close - SSD$AVGO_Open)
-SSD$ASML_Return <- (SSD$ASML_Adj_Close - SSD$ASML_Open)
-SSD$AMAT_Return <- (SSD$AMAT_Adj_Close - SSD$AMAT_Open)
-SSD$TXN_Return <- (SSD$TXN_Adj_Close - SSD$TXN_Open)
+SSD$NVDA_Return <- (SSD$NVDA_Close - SSD$NVDA_Open)
+SSD$TSM_Return <- (SSD$TSM_Close - SSD$TSM_Open)
+SSD$NXPI_Return <- (SSD$NXPI_Close - SSD$NXPI_Open)
+SSD$QCOM_Return <- (SSD$QCOM_Close - SSD$QCOM_Open)
+SSD$MPWR_Return <- (SSD$MPWR_Close - SSD$MPWR_Open)
+SSD$ON_Return <- (SSD$ON_Close - SSD$ON_Open)
+SSD$AMD_Return <- (SSD$AMD_Close - SSD$AMD_Open)
+SSD$INTC_Return <- (SSD$INTC_Close - SSD$INTC_Open)
+SSD$AVGO_Return <- (SSD$AVGO_Close - SSD$AVGO_Open)
+SSD$ASML_Return <- (SSD$ASML_Close - SSD$ASML_Open)
+SSD$AMAT_Return <- (SSD$AMAT_Close - SSD$AMAT_Open)
+SSD$TXN_Return <- (SSD$TXN_Close - SSD$TXN_Open)
 
 
-SSD$NVDA_avg_ret_1W <- running_average(SSD$NVDA_Return, 5)
-SSD$TSM_avg_ret_1W <- running_average(SSD$TSM_Return, 5)
-SSD$NXPI_avg_ret_1W <- running_average(SSD$NXPI_Return, 5)
-SSD$QCOM_avg_ret_1W <- running_average(SSD$QCOM_Return, 5)
-SSD$MPWR_avg_ret_1W <- running_average(SSD$MPWR_Return, 5)
-SSD$ON_avg_ret_1W <- running_average(SSD$ON_Return, 5)
-SSD$AMD_avg_ret_1W <- running_average(SSD$AMD_Return, 5)
-SSD$INTC_avg_ret_1W <- running_average(SSD$INTC_Return, 5)
-SSD$AVGO_avg_ret_1W <- running_average(SSD$AVGO_Return, 5)
-SSD$ASML_avg_ret_1W <- running_average(SSD$ASML_Return, 5)
-SSD$AMAT_avg_ret_1W <- running_average(SSD$AMAT_Return, 5)
-SSD$TXN_avg_ret_1W <- running_average(SSD$TXN_Return, 5)
+SSD$NVDA_SMA_ret_1W <- simple_moving_average(SSD$NVDA_Return, 5)
+SSD$TSM_SMA_ret_1W <- simple_moving_average(SSD$TSM_Return, 5)
+SSD$NXPI_SMA_ret_1W <- simple_moving_average(SSD$NXPI_Return, 5)
+SSD$QCOM_SMA_ret_1W <- simple_moving_average(SSD$QCOM_Return, 5)
+SSD$MPWR_SMA_ret_1W <- simple_moving_average(SSD$MPWR_Return, 5)
+SSD$ON_SMA_ret_1W <- simple_moving_average(SSD$ON_Return, 5)
+SSD$AMD_SMA_ret_1W <- simple_moving_average(SSD$AMD_Return, 5)
+SSD$INTC_SMA_ret_1W <- simple_moving_average(SSD$INTC_Return, 5)
+SSD$AVGO_SMA_ret_1W <- simple_moving_average(SSD$AVGO_Return, 5)
+SSD$ASML_SMA_ret_1W <- simple_moving_average(SSD$ASML_Return, 5)
+SSD$AMAT_SMA_ret_1W <- simple_moving_average(SSD$AMAT_Return, 5)
+SSD$TXN_SMA_ret_1W <- simple_moving_average(SSD$TXN_Return, 5)
 
-SSD$NVDA_avg_ret_2W <- running_average(SSD$NVDA_Return, 10)
-SSD$TSM_avg_ret_2W <- running_average(SSD$TSM_Return, 10)
-SSD$NXPI_avg_ret_2W <- running_average(SSD$NXPI_Return, 10)
-SSD$QCOM_avg_ret_2W <- running_average(SSD$QCOM_Return, 10)
-SSD$MPWR_avg_ret_2W <- running_average(SSD$MPWR_Return, 10)
-SSD$ON_avg_ret_2W <- running_average(SSD$ON_Return, 10)
-SSD$AMD_avg_ret_2W <- running_average(SSD$AMD_Return, 10)
-SSD$INTC_avg_ret_2W <- running_average(SSD$INTC_Return, 10)
-SSD$AVGO_avg_ret_2W <- running_average(SSD$AVGO_Return, 10)
-SSD$ASML_avg_ret_2W <- running_average(SSD$ASML_Return, 10)
-SSD$AMAT_avg_ret_2W <- running_average(SSD$AMAT_Return, 10)
-SSD$TXN_avg_ret_2W <- running_average(SSD$TXN_Return, 10)
+SSD$NVDA_SMA_ret_2W <- simple_moving_average(SSD$NVDA_Return, 10)
+SSD$TSM_SMA_ret_2W <- simple_moving_average(SSD$TSM_Return, 10)
+SSD$NXPI_SMA_ret_2W <- simple_moving_average(SSD$NXPI_Return, 10)
+SSD$QCOM_SMA_ret_2W <- simple_moving_average(SSD$QCOM_Return, 10)
+SSD$MPWR_SMA_ret_2W <- simple_moving_average(SSD$MPWR_Return, 10)
+SSD$ON_SMA_ret_2W <- simple_moving_average(SSD$ON_Return, 10)
+SSD$AMD_SMA_ret_2W <- simple_moving_average(SSD$AMD_Return, 10)
+SSD$INTC_SMA_ret_2W <- simple_moving_average(SSD$INTC_Return, 10)
+SSD$AVGO_SMA_ret_2W <- simple_moving_average(SSD$AVGO_Return, 10)
+SSD$ASML_SMA_ret_2W <- simple_moving_average(SSD$ASML_Return, 10)
+SSD$AMAT_SMA_ret_2W <- simple_moving_average(SSD$AMAT_Return, 10)
+SSD$TXN_SMA_ret_2W <- simple_moving_average(SSD$TXN_Return, 10)
 
-SSD$NVDA_avg_ret_1M <- running_average(SSD$NVDA_Return, 20)
-SSD$TSM_avg_ret_1M <- running_average(SSD$TSM_Return, 20)
-SSD$NXPI_avg_ret_1M <- running_average(SSD$NXPI_Return, 20)
-SSD$QCOM_avg_ret_1M <- running_average(SSD$QCOM_Return, 20)
-SSD$MPWR_avg_ret_1M <- running_average(SSD$MPWR_Return, 20)
-SSD$ON_avg_ret_1M <- running_average(SSD$ON_Return, 20)
-SSD$AMD_avg_ret_1M <- running_average(SSD$AMD_Return, 20)
-SSD$INTC_avg_ret_1M <- running_average(SSD$INTC_Return, 20)
-SSD$AVGO_avg_ret_1M <- running_average(SSD$AVGO_Return, 20)
-SSD$ASML_avg_ret_1M <- running_average(SSD$ASML_Return, 20)
-SSD$AMAT_avg_ret_1M <- running_average(SSD$AMAT_Return, 20)
-SSD$TXN_avg_ret_1M <- running_average(SSD$TXN_Return, 20)
+SSD$NVDA_SMA_ret_1M <- simple_moving_average(SSD$NVDA_Return, 20)
+SSD$TSM_SMA_ret_1M <- simple_moving_average(SSD$TSM_Return, 20)
+SSD$NXPI_SMA_ret_1M <- simple_moving_average(SSD$NXPI_Return, 20)
+SSD$QCOM_SMA_ret_1M <- simple_moving_average(SSD$QCOM_Return, 20)
+SSD$MPWR_SMA_ret_1M <- simple_moving_average(SSD$MPWR_Return, 20)
+SSD$ON_SMA_ret_1M <- simple_moving_average(SSD$ON_Return, 20)
+SSD$AMD_SMA_ret_1M <- simple_moving_average(SSD$AMD_Return, 20)
+SSD$INTC_SMA_ret_1M <- simple_moving_average(SSD$INTC_Return, 20)
+SSD$AVGO_SMA_ret_1M <- simple_moving_average(SSD$AVGO_Return, 20)
+SSD$ASML_SMA_ret_1M <- simple_moving_average(SSD$ASML_Return, 20)
+SSD$AMAT_SMA_ret_1M <- simple_moving_average(SSD$AMAT_Return, 20)
+SSD$TXN_SMA_ret_1M <- simple_moving_average(SSD$TXN_Return, 20)
 
-SSD$NVDA_avg_ret_2M <- running_average(SSD$NVDA_Return, 40)
-SSD$TSM_avg_ret_2M <- running_average(SSD$TSM_Return, 40)
-SSD$NXPI_avg_ret_2M <- running_average(SSD$NXPI_Return, 40)
-SSD$QCOM_avg_ret_2M <- running_average(SSD$QCOM_Return, 40)
-SSD$MPWR_avg_ret_2M <- running_average(SSD$MPWR_Return, 40)
-SSD$ON_avg_ret_2M <- running_average(SSD$ON_Return, 40)
-SSD$AMD_avg_ret_2M <- running_average(SSD$AMD_Return, 40)
-SSD$INTC_avg_ret_2M <- running_average(SSD$INTC_Return, 40)
-SSD$AVGO_avg_ret_2M <- running_average(SSD$AVGO_Return, 40)
-SSD$ASML_avg_ret_2M <- running_average(SSD$ASML_Return, 40)
-SSD$AMAT_avg_ret_2M <- running_average(SSD$AMAT_Return, 40)
-SSD$TXN_avg_ret_2M <- running_average(SSD$TXN_Return, 40)
+SSD$NVDA_SMA_ret_2M <- simple_moving_average(SSD$NVDA_Return, 40)
+SSD$TSM_SMA_ret_2M <- simple_moving_average(SSD$TSM_Return, 40)
+SSD$NXPI_SMA_ret_2M <- simple_moving_average(SSD$NXPI_Return, 40)
+SSD$QCOM_SMA_ret_2M <- simple_moving_average(SSD$QCOM_Return, 40)
+SSD$MPWR_SMA_ret_2M <- simple_moving_average(SSD$MPWR_Return, 40)
+SSD$ON_SMA_ret_2M <- simple_moving_average(SSD$ON_Return, 40)
+SSD$AMD_SMA_ret_2M <- simple_moving_average(SSD$AMD_Return, 40)
+SSD$INTC_SMA_ret_2M <- simple_moving_average(SSD$INTC_Return, 40)
+SSD$AVGO_SMA_ret_2M <- simple_moving_average(SSD$AVGO_Return, 40)
+SSD$ASML_SMA_ret_2M <- simple_moving_average(SSD$ASML_Return, 40)
+SSD$AMAT_SMA_ret_2M <- simple_moving_average(SSD$AMAT_Return, 40)
+SSD$TXN_SMA_ret_2M <- simple_moving_average(SSD$TXN_Return, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_ret_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_ret_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_ret_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_ret_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMA_ret_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMA_ret_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMA_ret_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMA_ret_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -755,10 +755,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_ret_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_ret_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_ret_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_ret_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMA_ret_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMA_ret_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMA_ret_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMA_ret_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -769,10 +769,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_ret_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_ret_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_ret_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_ret_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMA_ret_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMA_ret_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMA_ret_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMA_ret_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -784,68 +784,68 @@ ggplot(data = SSD, aes(x=Date)) +
 ```
 
 
-### n-Day Return Standard Deviation
+### Simple Moving Return Standard Deviation
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_std_dev_ret_1W <- running_deviation(SSD$NVDA_Return, 5)
-SSD$TSM_std_dev_ret_1W <- running_deviation(SSD$TSM_Return, 5)
-SSD$NXPI_std_dev_ret_1W <- running_deviation(SSD$NXPI_Return, 5)
-SSD$QCOM_std_dev_ret_1W <- running_deviation(SSD$QCOM_Return, 5)
-SSD$MPWR_std_dev_ret_1W <- running_deviation(SSD$MPWR_Return, 5)
-SSD$ON_std_dev_ret_1W <- running_deviation(SSD$ON_Return, 5)
-SSD$AMD_std_dev_ret_1W <- running_deviation(SSD$AMD_Return, 5)
-SSD$INTC_std_dev_ret_1W <- running_deviation(SSD$INTC_Return, 5)
-SSD$AVGO_std_dev_ret_1W <- running_deviation(SSD$AVGO_Return, 5)
-SSD$ASML_std_dev_ret_1W <- running_deviation(SSD$ASML_Return, 5)
-SSD$AMAT_std_dev_ret_1W <- running_deviation(SSD$AMAT_Return, 5)
-SSD$TXN_std_dev_ret_1W <- running_deviation(SSD$TXN_Return, 5)
+SSD$NVDA_SMSD_ret_1W <- simple_moving_deviation(SSD$NVDA_Return, 5)
+SSD$TSM_SMSD_ret_1W <- simple_moving_deviation(SSD$TSM_Return, 5)
+SSD$NXPI_SMSD_ret_1W <- simple_moving_deviation(SSD$NXPI_Return, 5)
+SSD$QCOM_SMSD_ret_1W <- simple_moving_deviation(SSD$QCOM_Return, 5)
+SSD$MPWR_SMSD_ret_1W <- simple_moving_deviation(SSD$MPWR_Return, 5)
+SSD$ON_SMSD_ret_1W <- simple_moving_deviation(SSD$ON_Return, 5)
+SSD$AMD_SMSD_ret_1W <- simple_moving_deviation(SSD$AMD_Return, 5)
+SSD$INTC_SMSD_ret_1W <- simple_moving_deviation(SSD$INTC_Return, 5)
+SSD$AVGO_SMSD_ret_1W <- simple_moving_deviation(SSD$AVGO_Return, 5)
+SSD$ASML_SMSD_ret_1W <- simple_moving_deviation(SSD$ASML_Return, 5)
+SSD$AMAT_SMSD_ret_1W <- simple_moving_deviation(SSD$AMAT_Return, 5)
+SSD$TXN_SMSD_ret_1W <- simple_moving_deviation(SSD$TXN_Return, 5)
 
-SSD$NVDA_std_dev_ret_2W <- running_deviation(SSD$NVDA_Return, 10)
-SSD$TSM_std_dev_ret_2W <- running_deviation(SSD$TSM_Return, 10)
-SSD$NXPI_std_dev_ret_2W <- running_deviation(SSD$NXPI_Return, 10)
-SSD$QCOM_std_dev_ret_2W <- running_deviation(SSD$QCOM_Return, 10)
-SSD$MPWR_std_dev_ret_2W <- running_deviation(SSD$MPWR_Return, 10)
-SSD$ON_std_dev_ret_2W <- running_deviation(SSD$ON_Return, 10)
-SSD$AMD_std_dev_ret_2W <- running_deviation(SSD$AMD_Return, 10)
-SSD$INTC_std_dev_ret_2W <- running_deviation(SSD$INTC_Return, 10)
-SSD$AVGO_std_dev_ret_2W <- running_deviation(SSD$AVGO_Return, 10)
-SSD$ASML_std_dev_ret_2W <- running_deviation(SSD$ASML_Return, 10)
-SSD$AMAT_std_dev_ret_2W <- running_deviation(SSD$AMAT_Return, 10)
-SSD$TXN_std_dev_ret_2W <- running_deviation(SSD$TXN_Return, 10)
+SSD$NVDA_SMSD_ret_2W <- simple_moving_deviation(SSD$NVDA_Return, 10)
+SSD$TSM_SMSD_ret_2W <- simple_moving_deviation(SSD$TSM_Return, 10)
+SSD$NXPI_SMSD_ret_2W <- simple_moving_deviation(SSD$NXPI_Return, 10)
+SSD$QCOM_SMSD_ret_2W <- simple_moving_deviation(SSD$QCOM_Return, 10)
+SSD$MPWR_SMSD_ret_2W <- simple_moving_deviation(SSD$MPWR_Return, 10)
+SSD$ON_SMSD_ret_2W <- simple_moving_deviation(SSD$ON_Return, 10)
+SSD$AMD_SMSD_ret_2W <- simple_moving_deviation(SSD$AMD_Return, 10)
+SSD$INTC_SMSD_ret_2W <- simple_moving_deviation(SSD$INTC_Return, 10)
+SSD$AVGO_SMSD_ret_2W <- simple_moving_deviation(SSD$AVGO_Return, 10)
+SSD$ASML_SMSD_ret_2W <- simple_moving_deviation(SSD$ASML_Return, 10)
+SSD$AMAT_SMSD_ret_2W <- simple_moving_deviation(SSD$AMAT_Return, 10)
+SSD$TXN_SMSD_ret_2W <- simple_moving_deviation(SSD$TXN_Return, 10)
 
-SSD$NVDA_std_dev_ret_1M <- running_deviation(SSD$NVDA_Return, 20)
-SSD$TSM_std_dev_ret_1M <- running_deviation(SSD$TSM_Return, 20)
-SSD$NXPI_std_dev_ret_1M <- running_deviation(SSD$NXPI_Return, 20)
-SSD$QCOM_std_dev_ret_1M <- running_deviation(SSD$QCOM_Return, 20)
-SSD$MPWR_std_dev_ret_1M <- running_deviation(SSD$MPWR_Return, 20)
-SSD$ON_std_dev_ret_1M <- running_deviation(SSD$ON_Return, 20)
-SSD$AMD_std_dev_ret_1M <- running_deviation(SSD$AMD_Return, 20)
-SSD$INTC_std_dev_ret_1M <- running_deviation(SSD$INTC_Return, 20)
-SSD$AVGO_std_dev_ret_1M <- running_deviation(SSD$AVGO_Return, 20)
-SSD$ASML_std_dev_ret_1M <- running_deviation(SSD$ASML_Return, 20)
-SSD$AMAT_std_dev_ret_1M <- running_deviation(SSD$AMAT_Return, 20)
-SSD$TXN_std_dev_ret_1M <- running_deviation(SSD$TXN_Return, 20)
+SSD$NVDA_SMSD_ret_1M <- simple_moving_deviation(SSD$NVDA_Return, 20)
+SSD$TSM_SMSD_ret_1M <- simple_moving_deviation(SSD$TSM_Return, 20)
+SSD$NXPI_SMSD_ret_1M <- simple_moving_deviation(SSD$NXPI_Return, 20)
+SSD$QCOM_SMSD_ret_1M <- simple_moving_deviation(SSD$QCOM_Return, 20)
+SSD$MPWR_SMSD_ret_1M <- simple_moving_deviation(SSD$MPWR_Return, 20)
+SSD$ON_SMSD_ret_1M <- simple_moving_deviation(SSD$ON_Return, 20)
+SSD$AMD_SMSD_ret_1M <- simple_moving_deviation(SSD$AMD_Return, 20)
+SSD$INTC_SMSD_ret_1M <- simple_moving_deviation(SSD$INTC_Return, 20)
+SSD$AVGO_SMSD_ret_1M <- simple_moving_deviation(SSD$AVGO_Return, 20)
+SSD$ASML_SMSD_ret_1M <- simple_moving_deviation(SSD$ASML_Return, 20)
+SSD$AMAT_SMSD_ret_1M <- simple_moving_deviation(SSD$AMAT_Return, 20)
+SSD$TXN_SMSD_ret_1M <- simple_moving_deviation(SSD$TXN_Return, 20)
 
-SSD$NVDA_std_dev_ret_2M <- running_deviation(SSD$NVDA_Return, 40)
-SSD$TSM_std_dev_ret_2M <- running_deviation(SSD$TSM_Return, 40)
-SSD$NXPI_std_dev_ret_2M <- running_deviation(SSD$NXPI_Return, 40)
-SSD$QCOM_std_dev_ret_2M <- running_deviation(SSD$QCOM_Return, 40)
-SSD$MPWR_std_dev_ret_2M <- running_deviation(SSD$MPWR_Return, 40)
-SSD$ON_std_dev_ret_2M <- running_deviation(SSD$ON_Return, 40)
-SSD$AMD_std_dev_ret_2M <- running_deviation(SSD$AMD_Return, 40)
-SSD$INTC_std_dev_ret_2M <- running_deviation(SSD$INTC_Return, 40)
-SSD$AVGO_std_dev_ret_2M <- running_deviation(SSD$AVGO_Return, 40)
-SSD$ASML_std_dev_ret_2M <- running_deviation(SSD$ASML_Return, 40)
-SSD$AMAT_std_dev_ret_2M <- running_deviation(SSD$AMAT_Return, 40)
-SSD$TXN_std_dev_ret_2M <- running_deviation(SSD$TXN_Return, 40)
+SSD$NVDA_SMSD_ret_2M <- simple_moving_deviation(SSD$NVDA_Return, 40)
+SSD$TSM_SMSD_ret_2M <- simple_moving_deviation(SSD$TSM_Return, 40)
+SSD$NXPI_SMSD_ret_2M <- simple_moving_deviation(SSD$NXPI_Return, 40)
+SSD$QCOM_SMSD_ret_2M <- simple_moving_deviation(SSD$QCOM_Return, 40)
+SSD$MPWR_SMSD_ret_2M <- simple_moving_deviation(SSD$MPWR_Return, 40)
+SSD$ON_SMSD_ret_2M <- simple_moving_deviation(SSD$ON_Return, 40)
+SSD$AMD_SMSD_ret_2M <- simple_moving_deviation(SSD$AMD_Return, 40)
+SSD$INTC_SMSD_ret_2M <- simple_moving_deviation(SSD$INTC_Return, 40)
+SSD$AVGO_SMSD_ret_2M <- simple_moving_deviation(SSD$AVGO_Return, 40)
+SSD$ASML_SMSD_ret_2M <- simple_moving_deviation(SSD$ASML_Return, 40)
+SSD$AMAT_SMSD_ret_2M <- simple_moving_deviation(SSD$AMAT_Return, 40)
+SSD$TXN_SMSD_ret_2M <- simple_moving_deviation(SSD$TXN_Return, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_ret_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_ret_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_ret_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_ret_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMSD_ret_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMSD_ret_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMSD_ret_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMSD_ret_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -857,10 +857,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_ret_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_ret_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_ret_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_ret_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMSD_ret_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMSD_ret_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMSD_ret_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMSD_ret_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -871,10 +871,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_ret_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_ret_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_ret_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_ret_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMSD_ret_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMSD_ret_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMSD_ret_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMSD_ret_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -886,68 +886,68 @@ ggplot(data = SSD, aes(x=Date)) +
 ```
 
 
-### n-Day Average Volume
+### Simple Moving Average Volume
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_avg_vol_1W <- running_average(SSD$NVDA_Volume, 5)
-SSD$TSM_avg_vol_1W <- running_average(SSD$TSM_Volume, 5)
-SSD$NXPI_avg_vol_1W <- running_average(SSD$NXPI_Volume, 5)
-SSD$QCOM_avg_vol_1W <- running_average(SSD$QCOM_Volume, 5)
-SSD$MPWR_avg_vol_1W <- running_average(SSD$MPWR_Volume, 5)
-SSD$ON_avg_vol_1W <- running_average(SSD$ON_Volume, 5)
-SSD$AMD_avg_vol_1W <- running_average(SSD$AMD_Volume, 5)
-SSD$INTC_avg_vol_1W <- running_average(SSD$INTC_Volume, 5)
-SSD$AVGO_avg_vol_1W <- running_average(SSD$AVGO_Volume, 5)
-SSD$ASML_avg_vol_1W <- running_average(SSD$ASML_Volume, 5)
-SSD$AMAT_avg_vol_1W <- running_average(SSD$AMAT_Volume, 5)
-SSD$TXN_avg_vol_1W <- running_average(SSD$TXN_Volume, 5)
+SSD$NVDA_SMA_vol_1W <- simple_moving_average(SSD$NVDA_Volume, 5)
+SSD$TSM_SMA_vol_1W <- simple_moving_average(SSD$TSM_Volume, 5)
+SSD$NXPI_SMA_vol_1W <- simple_moving_average(SSD$NXPI_Volume, 5)
+SSD$QCOM_SMA_vol_1W <- simple_moving_average(SSD$QCOM_Volume, 5)
+SSD$MPWR_SMA_vol_1W <- simple_moving_average(SSD$MPWR_Volume, 5)
+SSD$ON_SMA_vol_1W <- simple_moving_average(SSD$ON_Volume, 5)
+SSD$AMD_SMA_vol_1W <- simple_moving_average(SSD$AMD_Volume, 5)
+SSD$INTC_SMA_vol_1W <- simple_moving_average(SSD$INTC_Volume, 5)
+SSD$AVGO_SMA_vol_1W <- simple_moving_average(SSD$AVGO_Volume, 5)
+SSD$ASML_SMA_vol_1W <- simple_moving_average(SSD$ASML_Volume, 5)
+SSD$AMAT_SMA_vol_1W <- simple_moving_average(SSD$AMAT_Volume, 5)
+SSD$TXN_SMA_vol_1W <- simple_moving_average(SSD$TXN_Volume, 5)
 
-SSD$NVDA_avg_vol_2W <- running_average(SSD$NVDA_Volume, 10)
-SSD$TSM_avg_vol_2W <- running_average(SSD$TSM_Volume, 10)
-SSD$NXPI_avg_vol_2W <- running_average(SSD$NXPI_Volume, 10)
-SSD$QCOM_avg_vol_2W <- running_average(SSD$QCOM_Volume, 10)
-SSD$MPWR_avg_vol_2W <- running_average(SSD$MPWR_Volume, 10)
-SSD$ON_avg_vol_2W <- running_average(SSD$ON_Volume, 10)
-SSD$AMD_avg_vol_2W <- running_average(SSD$AMD_Volume, 10)
-SSD$INTC_avg_vol_2W <- running_average(SSD$INTC_Volume, 10)
-SSD$AVGO_avg_vol_2W <- running_average(SSD$AVGO_Volume, 10)
-SSD$ASML_avg_vol_2W <- running_average(SSD$ASML_Volume, 10)
-SSD$AMAT_avg_vol_2W <- running_average(SSD$AMAT_Volume, 10)
-SSD$TXN_avg_vol_2W <- running_average(SSD$TXN_Volume, 10)
+SSD$NVDA_SMA_vol_2W <- simple_moving_average(SSD$NVDA_Volume, 10)
+SSD$TSM_SMA_vol_2W <- simple_moving_average(SSD$TSM_Volume, 10)
+SSD$NXPI_SMA_vol_2W <- simple_moving_average(SSD$NXPI_Volume, 10)
+SSD$QCOM_SMA_vol_2W <- simple_moving_average(SSD$QCOM_Volume, 10)
+SSD$MPWR_SMA_vol_2W <- simple_moving_average(SSD$MPWR_Volume, 10)
+SSD$ON_SMA_vol_2W <- simple_moving_average(SSD$ON_Volume, 10)
+SSD$AMD_SMA_vol_2W <- simple_moving_average(SSD$AMD_Volume, 10)
+SSD$INTC_SMA_vol_2W <- simple_moving_average(SSD$INTC_Volume, 10)
+SSD$AVGO_SMA_vol_2W <- simple_moving_average(SSD$AVGO_Volume, 10)
+SSD$ASML_SMA_vol_2W <- simple_moving_average(SSD$ASML_Volume, 10)
+SSD$AMAT_SMA_vol_2W <- simple_moving_average(SSD$AMAT_Volume, 10)
+SSD$TXN_SMA_vol_2W <- simple_moving_average(SSD$TXN_Volume, 10)
 
-SSD$NVDA_avg_vol_1M <- running_average(SSD$NVDA_Volume, 20)
-SSD$TSM_avg_vol_1M <- running_average(SSD$TSM_Volume, 20)
-SSD$NXPI_avg_vol_1M <- running_average(SSD$NXPI_Volume, 20)
-SSD$QCOM_avg_vol_1M <- running_average(SSD$QCOM_Volume, 20)
-SSD$MPWR_avg_vol_1M <- running_average(SSD$MPWR_Volume, 20)
-SSD$ON_avg_vol_1M <- running_average(SSD$ON_Volume, 20)
-SSD$AMD_avg_vol_1M <- running_average(SSD$AMD_Volume, 20)
-SSD$INTC_avg_vol_1M <- running_average(SSD$INTC_Volume, 20)
-SSD$AVGO_avg_vol_1M <- running_average(SSD$AVGO_Volume, 20)
-SSD$ASML_avg_vol_1M <- running_average(SSD$ASML_Volume, 20)
-SSD$AMAT_avg_vol_1M <- running_average(SSD$AMAT_Volume, 20)
-SSD$TXN_avg_vol_1M <- running_average(SSD$TXN_Volume, 20)
+SSD$NVDA_SMA_vol_1M <- simple_moving_average(SSD$NVDA_Volume, 20)
+SSD$TSM_SMA_vol_1M <- simple_moving_average(SSD$TSM_Volume, 20)
+SSD$NXPI_SMA_vol_1M <- simple_moving_average(SSD$NXPI_Volume, 20)
+SSD$QCOM_SMA_vol_1M <- simple_moving_average(SSD$QCOM_Volume, 20)
+SSD$MPWR_SMA_vol_1M <- simple_moving_average(SSD$MPWR_Volume, 20)
+SSD$ON_SMA_vol_1M <- simple_moving_average(SSD$ON_Volume, 20)
+SSD$AMD_SMA_vol_1M <- simple_moving_average(SSD$AMD_Volume, 20)
+SSD$INTC_SMA_vol_1M <- simple_moving_average(SSD$INTC_Volume, 20)
+SSD$AVGO_SMA_vol_1M <- simple_moving_average(SSD$AVGO_Volume, 20)
+SSD$ASML_SMA_vol_1M <- simple_moving_average(SSD$ASML_Volume, 20)
+SSD$AMAT_SMA_vol_1M <- simple_moving_average(SSD$AMAT_Volume, 20)
+SSD$TXN_SMA_vol_1M <- simple_moving_average(SSD$TXN_Volume, 20)
 
-SSD$NVDA_avg_vol_2M <- running_average(SSD$NVDA_Volume, 40)
-SSD$TSM_avg_vol_2M <- running_average(SSD$TSM_Volume, 40)
-SSD$NXPI_avg_vol_2M <- running_average(SSD$NXPI_Volume, 40)
-SSD$QCOM_avg_vol_2M <- running_average(SSD$QCOM_Volume, 40)
-SSD$MPWR_avg_vol_2M <- running_average(SSD$MPWR_Volume, 40)
-SSD$ON_avg_vol_2M <- running_average(SSD$ON_Volume, 40)
-SSD$AMD_avg_vol_2M <- running_average(SSD$AMD_Volume, 40)
-SSD$INTC_avg_vol_2M <- running_average(SSD$INTC_Volume, 40)
-SSD$AVGO_avg_vol_2M <- running_average(SSD$AVGO_Volume, 40)
-SSD$ASML_avg_vol_2M <- running_average(SSD$ASML_Volume, 40)
-SSD$AMAT_avg_vol_2M <- running_average(SSD$AMAT_Volume, 40)
-SSD$TXN_avg_vol_2M <- running_average(SSD$TXN_Volume, 40)
+SSD$NVDA_SMA_vol_2M <- simple_moving_average(SSD$NVDA_Volume, 40)
+SSD$TSM_SMA_vol_2M <- simple_moving_average(SSD$TSM_Volume, 40)
+SSD$NXPI_SMA_vol_2M <- simple_moving_average(SSD$NXPI_Volume, 40)
+SSD$QCOM_SMA_vol_2M <- simple_moving_average(SSD$QCOM_Volume, 40)
+SSD$MPWR_SMA_vol_2M <- simple_moving_average(SSD$MPWR_Volume, 40)
+SSD$ON_SMA_vol_2M <- simple_moving_average(SSD$ON_Volume, 40)
+SSD$AMD_SMA_vol_2M <- simple_moving_average(SSD$AMD_Volume, 40)
+SSD$INTC_SMA_vol_2M <- simple_moving_average(SSD$INTC_Volume, 40)
+SSD$AVGO_SMA_vol_2M <- simple_moving_average(SSD$AVGO_Volume, 40)
+SSD$ASML_SMA_vol_2M <- simple_moving_average(SSD$ASML_Volume, 40)
+SSD$AMAT_SMA_vol_2M <- simple_moving_average(SSD$AMAT_Volume, 40)
+SSD$TXN_SMA_vol_2M <- simple_moving_average(SSD$TXN_Volume, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_avg_vol_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_avg_vol_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_avg_vol_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_avg_vol_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMA_vol_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMA_vol_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMA_vol_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMA_vol_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -960,10 +960,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_avg_vol_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_avg_vol_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_avg_vol_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_avg_vol_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMA_vol_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMA_vol_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMA_vol_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMA_vol_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -975,10 +975,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_avg_vol_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_avg_vol_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_avg_vol_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_avg_vol_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMA_vol_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMA_vol_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMA_vol_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMA_vol_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -990,68 +990,68 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
-### n-Day Volume Standard Deviation
+### Simple Moving Volume Standard Deviation
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
 
-SSD$NVDA_std_dev_vol_1W <- running_deviation(SSD$NVDA_Volume, 5)
-SSD$TSM_std_dev_vol_1W <- running_deviation(SSD$TSM_Volume, 5)
-SSD$NXPI_std_dev_vol_1W <- running_deviation(SSD$NXPI_Volume, 5)
-SSD$QCOM_std_dev_vol_1W <- running_deviation(SSD$QCOM_Volume, 5)
-SSD$MPWR_std_dev_vol_1W <- running_deviation(SSD$MPWR_Volume, 5)
-SSD$ON_std_dev_vol_1W <- running_deviation(SSD$ON_Volume, 5)
-SSD$AMD_std_dev_vol_1W <- running_deviation(SSD$AMD_Volume, 5)
-SSD$INTC_std_dev_vol_1W <- running_deviation(SSD$INTC_Volume, 5)
-SSD$AVGO_std_dev_vol_1W <- running_deviation(SSD$AVGO_Volume, 5)
-SSD$ASML_std_dev_vol_1W <- running_deviation(SSD$ASML_Volume, 5)
-SSD$AMAT_std_dev_vol_1W <- running_deviation(SSD$AMAT_Volume, 5)
-SSD$TXN_std_dev_vol_1W <- running_deviation(SSD$TXN_Volume, 5)
+SSD$NVDA_SMSD_vol_1W <- simple_moving_deviation(SSD$NVDA_Volume, 5)
+SSD$TSM_SMSD_vol_1W <- simple_moving_deviation(SSD$TSM_Volume, 5)
+SSD$NXPI_SMSD_vol_1W <- simple_moving_deviation(SSD$NXPI_Volume, 5)
+SSD$QCOM_SMSD_vol_1W <- simple_moving_deviation(SSD$QCOM_Volume, 5)
+SSD$MPWR_SMSD_vol_1W <- simple_moving_deviation(SSD$MPWR_Volume, 5)
+SSD$ON_SMSD_vol_1W <- simple_moving_deviation(SSD$ON_Volume, 5)
+SSD$AMD_SMSD_vol_1W <- simple_moving_deviation(SSD$AMD_Volume, 5)
+SSD$INTC_SMSD_vol_1W <- simple_moving_deviation(SSD$INTC_Volume, 5)
+SSD$AVGO_SMSD_vol_1W <- simple_moving_deviation(SSD$AVGO_Volume, 5)
+SSD$ASML_SMSD_vol_1W <- simple_moving_deviation(SSD$ASML_Volume, 5)
+SSD$AMAT_SMSD_vol_1W <- simple_moving_deviation(SSD$AMAT_Volume, 5)
+SSD$TXN_SMSD_vol_1W <- simple_moving_deviation(SSD$TXN_Volume, 5)
 
-SSD$NVDA_std_dev_vol_2W <- running_deviation(SSD$NVDA_Volume, 10)
-SSD$TSM_std_dev_vol_2W <- running_deviation(SSD$TSM_Volume, 10)
-SSD$NXPI_std_dev_vol_2W <- running_deviation(SSD$NXPI_Volume, 10)
-SSD$QCOM_std_dev_vol_2W <- running_deviation(SSD$QCOM_Volume, 10)
-SSD$MPWR_std_dev_vol_2W <- running_deviation(SSD$MPWR_Volume, 10)
-SSD$ON_std_dev_vol_2W <- running_deviation(SSD$ON_Volume, 10)
-SSD$AMD_std_dev_vol_2W <- running_deviation(SSD$AMD_Volume, 10)
-SSD$INTC_std_dev_vol_2W <- running_deviation(SSD$INTC_Volume, 10)
-SSD$AVGO_std_dev_vol_2W <- running_deviation(SSD$AVGO_Volume, 10)
-SSD$ASML_std_dev_vol_2W <- running_deviation(SSD$ASML_Volume, 10)
-SSD$AMAT_std_dev_vol_2W <- running_deviation(SSD$AMAT_Volume, 10)
-SSD$TXN_std_dev_vol_2W <- running_deviation(SSD$TXN_Volume, 10)
+SSD$NVDA_SMSD_vol_2W <- simple_moving_deviation(SSD$NVDA_Volume, 10)
+SSD$TSM_SMSD_vol_2W <- simple_moving_deviation(SSD$TSM_Volume, 10)
+SSD$NXPI_SMSD_vol_2W <- simple_moving_deviation(SSD$NXPI_Volume, 10)
+SSD$QCOM_SMSD_vol_2W <- simple_moving_deviation(SSD$QCOM_Volume, 10)
+SSD$MPWR_SMSD_vol_2W <- simple_moving_deviation(SSD$MPWR_Volume, 10)
+SSD$ON_SMSD_vol_2W <- simple_moving_deviation(SSD$ON_Volume, 10)
+SSD$AMD_SMSD_vol_2W <- simple_moving_deviation(SSD$AMD_Volume, 10)
+SSD$INTC_SMSD_vol_2W <- simple_moving_deviation(SSD$INTC_Volume, 10)
+SSD$AVGO_SMSD_vol_2W <- simple_moving_deviation(SSD$AVGO_Volume, 10)
+SSD$ASML_SMSD_vol_2W <- simple_moving_deviation(SSD$ASML_Volume, 10)
+SSD$AMAT_SMSD_vol_2W <- simple_moving_deviation(SSD$AMAT_Volume, 10)
+SSD$TXN_SMSD_vol_2W <- simple_moving_deviation(SSD$TXN_Volume, 10)
 
-SSD$NVDA_std_dev_vol_1M <- running_deviation(SSD$NVDA_Volume, 20)
-SSD$TSM_std_dev_vol_1M <- running_deviation(SSD$TSM_Volume, 20)
-SSD$NXPI_std_dev_vol_1M <- running_deviation(SSD$NXPI_Volume, 20)
-SSD$QCOM_std_dev_vol_1M <- running_deviation(SSD$QCOM_Volume, 20)
-SSD$MPWR_std_dev_vol_1M <- running_deviation(SSD$MPWR_Volume, 20)
-SSD$ON_std_dev_vol_1M <- running_deviation(SSD$ON_Volume, 20)
-SSD$AMD_std_dev_vol_1M <- running_deviation(SSD$AMD_Volume, 20)
-SSD$INTC_std_dev_vol_1M <- running_deviation(SSD$INTC_Volume, 20)
-SSD$AVGO_std_dev_vol_1M <- running_deviation(SSD$AVGO_Volume, 20)
-SSD$ASML_std_dev_vol_1M <- running_deviation(SSD$ASML_Volume, 20)
-SSD$AMAT_std_dev_vol_1M <- running_deviation(SSD$AMAT_Volume, 20)
-SSD$TXN_std_dev_vol_1M <- running_deviation(SSD$TXN_Volume, 20)
+SSD$NVDA_SMSD_vol_1M <- simple_moving_deviation(SSD$NVDA_Volume, 20)
+SSD$TSM_SMSD_vol_1M <- simple_moving_deviation(SSD$TSM_Volume, 20)
+SSD$NXPI_SMSD_vol_1M <- simple_moving_deviation(SSD$NXPI_Volume, 20)
+SSD$QCOM_SMSD_vol_1M <- simple_moving_deviation(SSD$QCOM_Volume, 20)
+SSD$MPWR_SMSD_vol_1M <- simple_moving_deviation(SSD$MPWR_Volume, 20)
+SSD$ON_SMSD_vol_1M <- simple_moving_deviation(SSD$ON_Volume, 20)
+SSD$AMD_SMSD_vol_1M <- simple_moving_deviation(SSD$AMD_Volume, 20)
+SSD$INTC_SMSD_vol_1M <- simple_moving_deviation(SSD$INTC_Volume, 20)
+SSD$AVGO_SMSD_vol_1M <- simple_moving_deviation(SSD$AVGO_Volume, 20)
+SSD$ASML_SMSD_vol_1M <- simple_moving_deviation(SSD$ASML_Volume, 20)
+SSD$AMAT_SMSD_vol_1M <- simple_moving_deviation(SSD$AMAT_Volume, 20)
+SSD$TXN_SMSD_vol_1M <- simple_moving_deviation(SSD$TXN_Volume, 20)
 
-SSD$NVDA_std_dev_vol_2M <- running_deviation(SSD$NVDA_Volume, 40)
-SSD$TSM_std_dev_vol_2M <- running_deviation(SSD$TSM_Volume, 40)
-SSD$NXPI_std_dev_vol_2M <- running_deviation(SSD$NXPI_Volume, 40)
-SSD$QCOM_std_dev_vol_2M <- running_deviation(SSD$QCOM_Volume, 40)
-SSD$MPWR_std_dev_vol_2M <- running_deviation(SSD$MPWR_Volume, 40)
-SSD$ON_std_dev_vol_2M <- running_deviation(SSD$ON_Volume, 40)
-SSD$AMD_std_dev_vol_2M <- running_deviation(SSD$AMD_Volume, 40)
-SSD$INTC_std_dev_vol_2M <- running_deviation(SSD$INTC_Volume, 40)
-SSD$AVGO_std_dev_vol_2M <- running_deviation(SSD$AVGO_Volume, 40)
-SSD$ASML_std_dev_vol_2M <- running_deviation(SSD$ASML_Volume, 40)
-SSD$AMAT_std_dev_vol_2M <- running_deviation(SSD$AMAT_Volume, 40)
-SSD$TXN_std_dev_vol_2M <- running_deviation(SSD$TXN_Volume, 40)
+SSD$NVDA_SMSD_vol_2M <- simple_moving_deviation(SSD$NVDA_Volume, 40)
+SSD$TSM_SMSD_vol_2M <- simple_moving_deviation(SSD$TSM_Volume, 40)
+SSD$NXPI_SMSD_vol_2M <- simple_moving_deviation(SSD$NXPI_Volume, 40)
+SSD$QCOM_SMSD_vol_2M <- simple_moving_deviation(SSD$QCOM_Volume, 40)
+SSD$MPWR_SMSD_vol_2M <- simple_moving_deviation(SSD$MPWR_Volume, 40)
+SSD$ON_SMSD_vol_2M <- simple_moving_deviation(SSD$ON_Volume, 40)
+SSD$AMD_SMSD_vol_2M <- simple_moving_deviation(SSD$AMD_Volume, 40)
+SSD$INTC_SMSD_vol_2M <- simple_moving_deviation(SSD$INTC_Volume, 40)
+SSD$AVGO_SMSD_vol_2M <- simple_moving_deviation(SSD$AVGO_Volume, 40)
+SSD$ASML_SMSD_vol_2M <- simple_moving_deviation(SSD$ASML_Volume, 40)
+SSD$AMAT_SMSD_vol_2M <- simple_moving_deviation(SSD$AMAT_Volume, 40)
+SSD$TXN_SMSD_vol_2M <- simple_moving_deviation(SSD$TXN_Volume, 40)
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = AMD_std_dev_vol_2W, color = 'AMD')) +
-  geom_line(aes(y = NXPI_std_dev_vol_2W, color = 'NXPI')) + 
-  geom_line(aes(y = TXN_std_dev_vol_2W, color = 'TXN')) +
-  geom_line(aes(y = AMAT_std_dev_vol_2W, color = 'AMAT')) +
+  geom_line(aes(y = AMD_SMSD_vol_2W, color = 'AMD')) +
+  geom_line(aes(y = NXPI_SMSD_vol_2W, color = 'NXPI')) + 
+  geom_line(aes(y = TXN_SMSD_vol_2W, color = 'TXN')) +
+  geom_line(aes(y = AMAT_SMSD_vol_2W, color = 'AMAT')) +
   scale_color_manual(values = c(
     'AMD' = 'green',
     'AMAT' = 'white',
@@ -1064,10 +1064,10 @@ ggplot(data = SSD, aes(x=Date)) +
 
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = NVDA_std_dev_vol_2W, color = 'NVDA')) +
-  geom_line(aes(y = MPWR_std_dev_vol_2W, color = 'MPWR')) + 
-  geom_line(aes(y = AVGO_std_dev_vol_2W, color = 'AVGO')) +
-  geom_line(aes(y = ASML_std_dev_vol_2W, color = 'ASML')) +
+  geom_line(aes(y = NVDA_SMSD_vol_2W, color = 'NVDA')) +
+  geom_line(aes(y = MPWR_SMSD_vol_2W, color = 'MPWR')) + 
+  geom_line(aes(y = AVGO_SMSD_vol_2W, color = 'AVGO')) +
+  geom_line(aes(y = ASML_SMSD_vol_2W, color = 'ASML')) +
   scale_color_manual(values = c(
     'NVDA' = 'darkolivegreen1',
     'MPWR' = 'moccasin',
@@ -1079,10 +1079,10 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 
 ggplot(data = SSD, aes(x=Date)) +
-  geom_line(aes(y = ON_std_dev_vol_2W, color = 'ON')) +
-  geom_line(aes(y = QCOM_std_dev_vol_2W, color = 'QCOM')) + 
-  geom_line(aes(y = INTC_std_dev_vol_2W, color = 'INTC')) +
-  geom_line(aes(y = TSM_std_dev_vol_2W, color = 'TSM')) +
+  geom_line(aes(y = ON_SMSD_vol_2W, color = 'ON')) +
+  geom_line(aes(y = QCOM_SMSD_vol_2W, color = 'QCOM')) + 
+  geom_line(aes(y = INTC_SMSD_vol_2W, color = 'INTC')) +
+  geom_line(aes(y = TSM_SMSD_vol_2W, color = 'TSM')) +
   scale_color_manual(values = c(
     'ON' = 'cyan',
     'QCOM' = 'purple',
@@ -1125,19 +1125,19 @@ With the predictors for a fixed stock thoroughly analyzed, the next important su
 
 
 ```{r include = TRUE, warning = FALSE, message = FALSE,  fig.show="hold", out.width="50%"}
-select(SSD, ends_with("avg_vol_2W")) %>%
+select(SSD, ends_with("SMA_vol_2W")) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="Volumes")
 
-select(SSD, ends_with("avg_cl_2W")) %>%
+select(SSD, ends_with("SMA_cl_2W")) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Averages")
 
-select(SSD, ends_with("std_dev_cl_2W")) %>%
+select(SSD, ends_with("SMSD_cl_2W")) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Standard Deviations")
 
-select(SSD, ends_with("avg_ret_2W")) %>%
+select(SSD, ends_with("SMA_ret_2W")) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", tl.cex=0.75, diag = FALSE, title="2-Week Normalized Volatilities")
 ```
@@ -1157,27 +1157,27 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 SSD_split_1W <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_1W)
+                                strata = NVDA_SMA_cl_1W)
 SSD_train_1W <- training(SSD_split_1W)
 SSD_test_1W <- testing(SSD_split_1W)
 
 
 SSD_split_2W <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_2W)
+                                strata = NVDA_SMA_cl_2W)
 SSD_train_2W <- training(SSD_split_2W)
 SSD_test_2W <- testing(SSD_split_2W)
 
 
 
 SSD_split_1M <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_1M)
+                                strata = NVDA_SMA_cl_1M)
 SSD_train_1M <- training(SSD_split_1M)
 SSD_test_1M <- testing(SSD_split_1M)
 
 
 
 SSD_split_2M <- initial_split(SSD, prop = 0.7,
-                                strata = NVDA_avg_cl_2M)
+                                strata = NVDA_SMA_cl_2M)
 SSD_train_2M <- training(SSD_split_2M)
 SSD_test_2M <- testing(SSD_split_2M)
 ```
@@ -1187,33 +1187,33 @@ SSD_test_2M <- testing(SSD_split_2M)
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
  SSD_recipe_1W = recipe(
-   NVDA_avg_cl_1W ~ NVDA_std_dev_cl_1W + NVDA_avg_ret_1W + NVDA_std_dev_ret_1W + NVDA_avg_vol_1W + NVDA_std_dev_vol_1W +
-     TSM_avg_cl_1W + TSM_std_dev_cl_1W + TSM_avg_ret_1W + TSM_std_dev_ret_1W + TSM_avg_vol_1W + TSM_std_dev_vol_1W +
-     NXPI_avg_cl_1W + NXPI_std_dev_cl_1W + NXPI_avg_ret_1W + NXPI_std_dev_ret_1W + NXPI_avg_vol_1W + NXPI_std_dev_vol_1W + QCOM_avg_cl_1W + QCOM_std_dev_cl_1W + QCOM_avg_ret_1W + QCOM_std_dev_ret_1W + QCOM_avg_vol_1W + QCOM_std_dev_vol_1W + MPWR_avg_cl_1W + MPWR_std_dev_cl_1W + MPWR_avg_ret_1W + MPWR_std_dev_ret_1W + MPWR_avg_vol_1W + MPWR_std_dev_vol_1W + ON_avg_cl_1W + ON_std_dev_cl_1W + ON_avg_ret_1W + ON_std_dev_ret_1W + ON_avg_vol_1W + ON_std_dev_vol_1W + AMD_avg_cl_1W + AMD_std_dev_cl_1W + AMD_avg_ret_1W + AMD_std_dev_ret_1W + AMD_avg_vol_1W + AMD_std_dev_vol_1W + INTC_avg_cl_1W + INTC_std_dev_cl_1W + INTC_avg_ret_1W + INTC_std_dev_ret_1W + INTC_avg_vol_1W + INTC_std_dev_vol_1W + AVGO_avg_cl_1W + AVGO_std_dev_cl_1W + AVGO_avg_ret_1W + AVGO_std_dev_ret_1W + AVGO_avg_vol_1W + AVGO_std_dev_vol_1W + ASML_avg_cl_1W + ASML_std_dev_cl_1W + ASML_avg_ret_1W + ASML_std_dev_ret_1W + ASML_avg_vol_1W + ASML_std_dev_vol_1W + AMAT_avg_cl_1W + AMAT_std_dev_cl_1W + AMAT_avg_ret_1W + AMAT_std_dev_ret_1W + AMAT_avg_vol_1W + AMAT_std_dev_vol_1W + TXN_avg_cl_1W + TXN_std_dev_cl_1W + TXN_avg_ret_1W + TXN_std_dev_ret_1W + TXN_avg_vol_1W + TXN_std_dev_vol_1W,
+   NVDA_SMA_cl_1W ~ NVDA_SMSD_cl_1W + NVDA_SMA_ret_1W + NVDA_SMSD_ret_1W + NVDA_SMA_vol_1W + NVDA_SMSD_vol_1W +
+     TSM_SMA_cl_1W + TSM_SMSD_cl_1W + TSM_SMA_ret_1W + TSM_SMSD_ret_1W + TSM_SMA_vol_1W + TSM_SMSD_vol_1W +
+     NXPI_SMA_cl_1W + NXPI_SMSD_cl_1W + NXPI_SMA_ret_1W + NXPI_SMSD_ret_1W + NXPI_SMA_vol_1W + NXPI_SMSD_vol_1W + QCOM_SMA_cl_1W + QCOM_SMSD_cl_1W + QCOM_SMA_ret_1W + QCOM_SMSD_ret_1W + QCOM_SMA_vol_1W + QCOM_SMSD_vol_1W + MPWR_SMA_cl_1W + MPWR_SMSD_cl_1W + MPWR_SMA_ret_1W + MPWR_SMSD_ret_1W + MPWR_SMA_vol_1W + MPWR_SMSD_vol_1W + ON_SMA_cl_1W + ON_SMSD_cl_1W + ON_SMA_ret_1W + ON_SMSD_ret_1W + ON_SMA_vol_1W + ON_SMSD_vol_1W + AMD_SMA_cl_1W + AMD_SMSD_cl_1W + AMD_SMA_ret_1W + AMD_SMSD_ret_1W + AMD_SMA_vol_1W + AMD_SMSD_vol_1W + INTC_SMA_cl_1W + INTC_SMSD_cl_1W + INTC_SMA_ret_1W + INTC_SMSD_ret_1W + INTC_SMA_vol_1W + INTC_SMSD_vol_1W + AVGO_SMA_cl_1W + AVGO_SMSD_cl_1W + AVGO_SMA_ret_1W + AVGO_SMSD_ret_1W + AVGO_SMA_vol_1W + AVGO_SMSD_vol_1W + ASML_SMA_cl_1W + ASML_SMSD_cl_1W + ASML_SMA_ret_1W + ASML_SMSD_ret_1W + ASML_SMA_vol_1W + ASML_SMSD_vol_1W + AMAT_SMA_cl_1W + AMAT_SMSD_cl_1W + AMAT_SMA_ret_1W + AMAT_SMSD_ret_1W + AMAT_SMA_vol_1W + AMAT_SMSD_vol_1W + TXN_SMA_cl_1W + TXN_SMSD_cl_1W + TXN_SMA_ret_1W + TXN_SMSD_ret_1W + TXN_SMA_vol_1W + TXN_SMSD_vol_1W,
                      data=SSD_train_1W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
  SSD_recipe_2W = recipe(
-   NVDA_avg_cl_2W ~ NVDA_std_dev_cl_2W + NVDA_avg_ret_2W + NVDA_std_dev_ret_2W + NVDA_avg_vol_2W + NVDA_std_dev_vol_2W +
-     TSM_avg_cl_2W + TSM_std_dev_cl_2W + TSM_avg_ret_2W + TSM_std_dev_ret_2W + TSM_avg_vol_2W + TSM_std_dev_vol_2W +
-     NXPI_avg_cl_2W + NXPI_std_dev_cl_2W + NXPI_avg_ret_2W + NXPI_std_dev_ret_2W + NXPI_avg_vol_2W + NXPI_std_dev_vol_2W + QCOM_avg_cl_2W + QCOM_std_dev_cl_2W + QCOM_avg_ret_2W + QCOM_std_dev_ret_2W + QCOM_avg_vol_2W + QCOM_std_dev_vol_2W + MPWR_avg_cl_2W + MPWR_std_dev_cl_2W + MPWR_avg_ret_2W + MPWR_std_dev_ret_2W + MPWR_avg_vol_2W + MPWR_std_dev_vol_2W + ON_avg_cl_2W + ON_std_dev_cl_2W + ON_avg_ret_2W + ON_std_dev_ret_2W + ON_avg_vol_2W + ON_std_dev_vol_2W + AMD_avg_cl_2W + AMD_std_dev_cl_2W + AMD_avg_ret_2W + AMD_std_dev_ret_2W + AMD_avg_vol_2W + AMD_std_dev_vol_2W + INTC_avg_cl_2W + INTC_std_dev_cl_2W + INTC_avg_ret_2W + INTC_std_dev_ret_2W + INTC_avg_vol_2W + INTC_std_dev_vol_2W + AVGO_avg_cl_2W + AVGO_std_dev_cl_2W + AVGO_avg_ret_2W + AVGO_std_dev_ret_2W + AVGO_avg_vol_2W + AVGO_std_dev_vol_2W + ASML_avg_cl_2W + ASML_std_dev_cl_2W + ASML_avg_ret_2W + ASML_std_dev_ret_2W + ASML_avg_vol_2W + ASML_std_dev_vol_2W + AMAT_avg_cl_2W + AMAT_std_dev_cl_2W + AMAT_avg_ret_2W + AMAT_std_dev_ret_2W + AMAT_avg_vol_2W + AMAT_std_dev_vol_2W + TXN_avg_cl_2W + TXN_std_dev_cl_2W + TXN_avg_ret_2W + TXN_std_dev_ret_2W + TXN_avg_vol_2W + TXN_std_dev_vol_2W,
+   NVDA_SMA_cl_2W ~ NVDA_SMSD_cl_2W + NVDA_SMA_ret_2W + NVDA_SMSD_ret_2W + NVDA_SMA_vol_2W + NVDA_SMSD_vol_2W +
+     TSM_SMA_cl_2W + TSM_SMSD_cl_2W + TSM_SMA_ret_2W + TSM_SMSD_ret_2W + TSM_SMA_vol_2W + TSM_SMSD_vol_2W +
+     NXPI_SMA_cl_2W + NXPI_SMSD_cl_2W + NXPI_SMA_ret_2W + NXPI_SMSD_ret_2W + NXPI_SMA_vol_2W + NXPI_SMSD_vol_2W + QCOM_SMA_cl_2W + QCOM_SMSD_cl_2W + QCOM_SMA_ret_2W + QCOM_SMSD_ret_2W + QCOM_SMA_vol_2W + QCOM_SMSD_vol_2W + MPWR_SMA_cl_2W + MPWR_SMSD_cl_2W + MPWR_SMA_ret_2W + MPWR_SMSD_ret_2W + MPWR_SMA_vol_2W + MPWR_SMSD_vol_2W + ON_SMA_cl_2W + ON_SMSD_cl_2W + ON_SMA_ret_2W + ON_SMSD_ret_2W + ON_SMA_vol_2W + ON_SMSD_vol_2W + AMD_SMA_cl_2W + AMD_SMSD_cl_2W + AMD_SMA_ret_2W + AMD_SMSD_ret_2W + AMD_SMA_vol_2W + AMD_SMSD_vol_2W + INTC_SMA_cl_2W + INTC_SMSD_cl_2W + INTC_SMA_ret_2W + INTC_SMSD_ret_2W + INTC_SMA_vol_2W + INTC_SMSD_vol_2W + AVGO_SMA_cl_2W + AVGO_SMSD_cl_2W + AVGO_SMA_ret_2W + AVGO_SMSD_ret_2W + AVGO_SMA_vol_2W + AVGO_SMSD_vol_2W + ASML_SMA_cl_2W + ASML_SMSD_cl_2W + ASML_SMA_ret_2W + ASML_SMSD_ret_2W + ASML_SMA_vol_2W + ASML_SMSD_vol_2W + AMAT_SMA_cl_2W + AMAT_SMSD_cl_2W + AMAT_SMA_ret_2W + AMAT_SMSD_ret_2W + AMAT_SMA_vol_2W + AMAT_SMSD_vol_2W + TXN_SMA_cl_2W + TXN_SMSD_cl_2W + TXN_SMA_ret_2W + TXN_SMSD_ret_2W + TXN_SMA_vol_2W + TXN_SMSD_vol_2W,
                      data=SSD_train_2W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
   SSD_recipe_1M = recipe(
-   NVDA_avg_cl_1M ~ NVDA_std_dev_cl_1M + NVDA_avg_ret_1M + NVDA_std_dev_ret_1M + NVDA_avg_vol_1M + NVDA_std_dev_vol_1M +
-     TSM_avg_cl_1M + TSM_std_dev_cl_1M + TSM_avg_ret_1M + TSM_std_dev_ret_1M + TSM_avg_vol_1M + TSM_std_dev_vol_1M +
-     NXPI_avg_cl_1M + NXPI_std_dev_cl_1M + NXPI_avg_ret_1M + NXPI_std_dev_ret_1M + NXPI_avg_vol_1M + NXPI_std_dev_vol_1M + QCOM_avg_cl_1M + QCOM_std_dev_cl_1M + QCOM_avg_ret_1M + QCOM_std_dev_ret_1M + QCOM_avg_vol_1M + QCOM_std_dev_vol_1M + MPWR_avg_cl_1M + MPWR_std_dev_cl_1M + MPWR_avg_ret_1M + MPWR_std_dev_ret_1M + MPWR_avg_vol_1M + MPWR_std_dev_vol_1M + ON_avg_cl_1M + ON_std_dev_cl_1M + ON_avg_ret_1M + ON_std_dev_ret_1M + ON_avg_vol_1M + ON_std_dev_vol_1M + AMD_avg_cl_1M + AMD_std_dev_cl_1M + AMD_avg_ret_1M + AMD_std_dev_ret_1M + AMD_avg_vol_1M + AMD_std_dev_vol_1M + INTC_avg_cl_1M + INTC_std_dev_cl_1M + INTC_avg_ret_1M + INTC_std_dev_ret_1M + INTC_avg_vol_1M + INTC_std_dev_vol_1M + AVGO_avg_cl_1M + AVGO_std_dev_cl_1M + AVGO_avg_ret_1M + AVGO_std_dev_ret_1M + AVGO_avg_vol_1M + AVGO_std_dev_vol_1M + ASML_avg_cl_1M + ASML_std_dev_cl_1M + ASML_avg_ret_1M + ASML_std_dev_ret_1M + ASML_avg_vol_1M + ASML_std_dev_vol_1M + AMAT_avg_cl_1M + AMAT_std_dev_cl_1M + AMAT_avg_ret_1M + AMAT_std_dev_ret_1M + AMAT_avg_vol_1M + AMAT_std_dev_vol_1M + TXN_avg_cl_1M + TXN_std_dev_cl_1M + TXN_avg_ret_1M + TXN_std_dev_ret_1M + TXN_avg_vol_1M + TXN_std_dev_vol_1M,
+   NVDA_SMA_cl_1M ~ NVDA_SMSD_cl_1M + NVDA_SMA_ret_1M + NVDA_SMSD_ret_1M + NVDA_SMA_vol_1M + NVDA_SMSD_vol_1M +
+     TSM_SMA_cl_1M + TSM_SMSD_cl_1M + TSM_SMA_ret_1M + TSM_SMSD_ret_1M + TSM_SMA_vol_1M + TSM_SMSD_vol_1M +
+     NXPI_SMA_cl_1M + NXPI_SMSD_cl_1M + NXPI_SMA_ret_1M + NXPI_SMSD_ret_1M + NXPI_SMA_vol_1M + NXPI_SMSD_vol_1M + QCOM_SMA_cl_1M + QCOM_SMSD_cl_1M + QCOM_SMA_ret_1M + QCOM_SMSD_ret_1M + QCOM_SMA_vol_1M + QCOM_SMSD_vol_1M + MPWR_SMA_cl_1M + MPWR_SMSD_cl_1M + MPWR_SMA_ret_1M + MPWR_SMSD_ret_1M + MPWR_SMA_vol_1M + MPWR_SMSD_vol_1M + ON_SMA_cl_1M + ON_SMSD_cl_1M + ON_SMA_ret_1M + ON_SMSD_ret_1M + ON_SMA_vol_1M + ON_SMSD_vol_1M + AMD_SMA_cl_1M + AMD_SMSD_cl_1M + AMD_SMA_ret_1M + AMD_SMSD_ret_1M + AMD_SMA_vol_1M + AMD_SMSD_vol_1M + INTC_SMA_cl_1M + INTC_SMSD_cl_1M + INTC_SMA_ret_1M + INTC_SMSD_ret_1M + INTC_SMA_vol_1M + INTC_SMSD_vol_1M + AVGO_SMA_cl_1M + AVGO_SMSD_cl_1M + AVGO_SMA_ret_1M + AVGO_SMSD_ret_1M + AVGO_SMA_vol_1M + AVGO_SMSD_vol_1M + ASML_SMA_cl_1M + ASML_SMSD_cl_1M + ASML_SMA_ret_1M + ASML_SMSD_ret_1M + ASML_SMA_vol_1M + ASML_SMSD_vol_1M + AMAT_SMA_cl_1M + AMAT_SMSD_cl_1M + AMAT_SMA_ret_1M + AMAT_SMSD_ret_1M + AMAT_SMA_vol_1M + AMAT_SMSD_vol_1M + TXN_SMA_cl_1M + TXN_SMSD_cl_1M + TXN_SMA_ret_1M + TXN_SMSD_ret_1M + TXN_SMA_vol_1M + TXN_SMSD_vol_1M,
                      data=SSD_train_1M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
   
    SSD_recipe_2M = recipe(
-   NVDA_avg_cl_2M ~ NVDA_std_dev_cl_2M + NVDA_avg_ret_2M + NVDA_std_dev_ret_2M + NVDA_avg_vol_2M + NVDA_std_dev_vol_2M +
-     TSM_avg_cl_2M + TSM_std_dev_cl_2M + TSM_avg_ret_2M + TSM_std_dev_ret_2M + TSM_avg_vol_2M + TSM_std_dev_vol_2M +
-     NXPI_avg_cl_2M + NXPI_std_dev_cl_2M + NXPI_avg_ret_2M + NXPI_std_dev_ret_2M + NXPI_avg_vol_2M + NXPI_std_dev_vol_2M + QCOM_avg_cl_2M + QCOM_std_dev_cl_2M + QCOM_avg_ret_2M + QCOM_std_dev_ret_2M + QCOM_avg_vol_2M + QCOM_std_dev_vol_2M + MPWR_avg_cl_2M + MPWR_std_dev_cl_2M + MPWR_avg_ret_2M + MPWR_std_dev_ret_2M + MPWR_avg_vol_2M + MPWR_std_dev_vol_2M + ON_avg_cl_2M + ON_std_dev_cl_2M + ON_avg_ret_2M + ON_std_dev_ret_2M + ON_avg_vol_2M + ON_std_dev_vol_2M + AMD_avg_cl_2M + AMD_std_dev_cl_2M + AMD_avg_ret_2M + AMD_std_dev_ret_2M + AMD_avg_vol_2M + AMD_std_dev_vol_2M + INTC_avg_cl_2M + INTC_std_dev_cl_2M + INTC_avg_ret_2M + INTC_std_dev_ret_2M + INTC_avg_vol_2M + INTC_std_dev_vol_2M + AVGO_avg_cl_2M + AVGO_std_dev_cl_2M + AVGO_avg_ret_2M + AVGO_std_dev_ret_2M + AVGO_avg_vol_2M + AVGO_std_dev_vol_2M + ASML_avg_cl_2M + ASML_std_dev_cl_2M + ASML_avg_ret_2M + ASML_std_dev_ret_2M + ASML_avg_vol_2M + ASML_std_dev_vol_2M + AMAT_avg_cl_2M + AMAT_std_dev_cl_2M + AMAT_avg_ret_2M + AMAT_std_dev_ret_2M + AMAT_avg_vol_2M + AMAT_std_dev_vol_2M + TXN_avg_cl_2M + TXN_std_dev_cl_2M + TXN_avg_ret_2M + TXN_std_dev_ret_2M + TXN_avg_vol_2M + TXN_std_dev_vol_2M,
+   NVDA_SMA_cl_2M ~ NVDA_SMSD_cl_2M + NVDA_SMA_ret_2M + NVDA_SMSD_ret_2M + NVDA_SMA_vol_2M + NVDA_SMSD_vol_2M +
+     TSM_SMA_cl_2M + TSM_SMSD_cl_2M + TSM_SMA_ret_2M + TSM_SMSD_ret_2M + TSM_SMA_vol_2M + TSM_SMSD_vol_2M +
+     NXPI_SMA_cl_2M + NXPI_SMSD_cl_2M + NXPI_SMA_ret_2M + NXPI_SMSD_ret_2M + NXPI_SMA_vol_2M + NXPI_SMSD_vol_2M + QCOM_SMA_cl_2M + QCOM_SMSD_cl_2M + QCOM_SMA_ret_2M + QCOM_SMSD_ret_2M + QCOM_SMA_vol_2M + QCOM_SMSD_vol_2M + MPWR_SMA_cl_2M + MPWR_SMSD_cl_2M + MPWR_SMA_ret_2M + MPWR_SMSD_ret_2M + MPWR_SMA_vol_2M + MPWR_SMSD_vol_2M + ON_SMA_cl_2M + ON_SMSD_cl_2M + ON_SMA_ret_2M + ON_SMSD_ret_2M + ON_SMA_vol_2M + ON_SMSD_vol_2M + AMD_SMA_cl_2M + AMD_SMSD_cl_2M + AMD_SMA_ret_2M + AMD_SMSD_ret_2M + AMD_SMA_vol_2M + AMD_SMSD_vol_2M + INTC_SMA_cl_2M + INTC_SMSD_cl_2M + INTC_SMA_ret_2M + INTC_SMSD_ret_2M + INTC_SMA_vol_2M + INTC_SMSD_vol_2M + AVGO_SMA_cl_2M + AVGO_SMSD_cl_2M + AVGO_SMA_ret_2M + AVGO_SMSD_ret_2M + AVGO_SMA_vol_2M + AVGO_SMSD_vol_2M + ASML_SMA_cl_2M + ASML_SMSD_cl_2M + ASML_SMA_ret_2M + ASML_SMSD_ret_2M + ASML_SMA_vol_2M + ASML_SMSD_vol_2M + AMAT_SMA_cl_2M + AMAT_SMSD_cl_2M + AMAT_SMA_ret_2M + AMAT_SMSD_ret_2M + AMAT_SMA_vol_2M + AMAT_SMSD_vol_2M + TXN_SMA_cl_2M + TXN_SMSD_cl_2M + TXN_SMA_ret_2M + TXN_SMSD_ret_2M + TXN_SMA_vol_2M + TXN_SMSD_vol_2M,
                      data=SSD_train_2M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
@@ -1225,10 +1225,10 @@ SSD_test_2M <- testing(SSD_split_2M)
 ## k-Fold Cross Validation
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-SSD_folds_1W <- vfold_cv(SSD_train_1W, v = 10, strata = NVDA_avg_cl_1W)
-SSD_folds_2W <- vfold_cv(SSD_train_2W, v = 10, strata = NVDA_avg_cl_2W)
-SSD_folds_1M <- vfold_cv(SSD_train_1M, v = 10, strata = NVDA_avg_cl_1M)
-SSD_folds_2M <- vfold_cv(SSD_train_2M, v = 10, strata = NVDA_avg_cl_2M)
+SSD_folds_1W <- vfold_cv(SSD_train_1W, v = 10, strata = NVDA_SMA_cl_1W)
+SSD_folds_2W <- vfold_cv(SSD_train_2W, v = 10, strata = NVDA_SMA_cl_2W)
+SSD_folds_1M <- vfold_cv(SSD_train_1M, v = 10, strata = NVDA_SMA_cl_1M)
+SSD_folds_2M <- vfold_cv(SSD_train_2M, v = 10, strata = NVDA_SMA_cl_2M)
 ```
 
 
@@ -1568,71 +1568,71 @@ knn_fit_2M <- fit(knn_final_wflow_2M, SSD_train_2M)
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Training 
-lm_train_res_1W <- predict(lm_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-lm_train_res_1W <- bind_cols(lm_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+lm_train_res_1W <- predict(lm_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_SMA_cl_1W))
+lm_train_res_1W <- bind_cols(lm_train_res_1W, SSD_train_1W %>% select(NVDA_SMA_cl_1W))
 
-lm_train_res_2W <- predict(lm_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-lm_train_res_2W <- bind_cols(lm_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+lm_train_res_2W <- predict(lm_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_SMA_cl_2W))
+lm_train_res_2W <- bind_cols(lm_train_res_2W, SSD_train_2W %>% select(NVDA_SMA_cl_2W))
 
-lm_train_res_1M <- predict(lm_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-lm_train_res_1M <- bind_cols(lm_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+lm_train_res_1M <- predict(lm_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_SMA_cl_1M))
+lm_train_res_1M <- bind_cols(lm_train_res_1M, SSD_train_1M %>% select(NVDA_SMA_cl_1M))
 
-lm_train_res_2M <- predict(lm_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-lm_train_res_2M <- bind_cols(lm_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+lm_train_res_2M <- predict(lm_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_SMA_cl_2M))
+lm_train_res_2M <- bind_cols(lm_train_res_2M, SSD_train_2M %>% select(NVDA_SMA_cl_2M))
 
 
 # Ridge Regression Training
-ridge_train_res_1W <- predict(ridge_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-ridge_train_res_1W <- bind_cols(ridge_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+ridge_train_res_1W <- predict(ridge_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_SMA_cl_1W))
+ridge_train_res_1W <- bind_cols(ridge_train_res_1W, SSD_train_1W %>% select(NVDA_SMA_cl_1W))
 
-ridge_train_res_2W <- predict(ridge_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-ridge_train_res_2W <- bind_cols(ridge_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+ridge_train_res_2W <- predict(ridge_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_SMA_cl_2W))
+ridge_train_res_2W <- bind_cols(ridge_train_res_2W, SSD_train_2W %>% select(NVDA_SMA_cl_2W))
 
-ridge_train_res_1M <- predict(ridge_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-ridge_train_res_1M <- bind_cols(ridge_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+ridge_train_res_1M <- predict(ridge_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_SMA_cl_1M))
+ridge_train_res_1M <- bind_cols(ridge_train_res_1M, SSD_train_1M %>% select(NVDA_SMA_cl_1M))
 
-ridge_train_res_2M <- predict(ridge_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-ridge_train_res_2M <- bind_cols(ridge_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+ridge_train_res_2M <- predict(ridge_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_SMA_cl_2M))
+ridge_train_res_2M <- bind_cols(ridge_train_res_2M, SSD_train_2M %>% select(NVDA_SMA_cl_2M))
 
 
 # Lasso Regression Training
-lasso_train_res_1W <- predict(lasso_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-lasso_train_res_1W <- bind_cols(lasso_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+lasso_train_res_1W <- predict(lasso_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_SMA_cl_1W))
+lasso_train_res_1W <- bind_cols(lasso_train_res_1W, SSD_train_1W %>% select(NVDA_SMA_cl_1W))
 
-lasso_train_res_2W <- predict(lasso_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-lasso_train_res_2W <- bind_cols(lasso_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+lasso_train_res_2W <- predict(lasso_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_SMA_cl_2W))
+lasso_train_res_2W <- bind_cols(lasso_train_res_2W, SSD_train_2W %>% select(NVDA_SMA_cl_2W))
 
-lasso_train_res_1M <- predict(lasso_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-lasso_train_res_1M <- bind_cols(lasso_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+lasso_train_res_1M <- predict(lasso_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_SMA_cl_1M))
+lasso_train_res_1M <- bind_cols(lasso_train_res_1M, SSD_train_1M %>% select(NVDA_SMA_cl_1M))
 
-lasso_train_res_2M <- predict(lasso_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-lasso_train_res_2M <- bind_cols(lasso_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+lasso_train_res_2M <- predict(lasso_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_SMA_cl_2M))
+lasso_train_res_2M <- bind_cols(lasso_train_res_2M, SSD_train_2M %>% select(NVDA_SMA_cl_2M))
 
 # Elastic Net Training
-elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_SMA_cl_1W))
+elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, SSD_train_1W %>% select(NVDA_SMA_cl_1W))
 
-elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_SMA_cl_2W))
+elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, SSD_train_2W %>% select(NVDA_SMA_cl_2W))
 
-elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_SMA_cl_1M))
+elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, SSD_train_1M %>% select(NVDA_SMA_cl_1M))
 
-elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_SMA_cl_2M))
+elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, SSD_train_2M %>% select(NVDA_SMA_cl_2M))
 
 # k-Nearest Neighbors Training
-knn_train_res_1W <- predict(knn_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-knn_train_res_1W <- bind_cols(knn_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
+knn_train_res_1W <- predict(knn_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_SMA_cl_1W))
+knn_train_res_1W <- bind_cols(knn_train_res_1W, SSD_train_1W %>% select(NVDA_SMA_cl_1W))
 
-knn_train_res_2W <- predict(knn_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-knn_train_res_2W <- bind_cols(knn_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
+knn_train_res_2W <- predict(knn_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_SMA_cl_2W))
+knn_train_res_2W <- bind_cols(knn_train_res_2W, SSD_train_2W %>% select(NVDA_SMA_cl_2W))
 
-knn_train_res_1M <- predict(knn_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-knn_train_res_1M <- bind_cols(knn_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
+knn_train_res_1M <- predict(knn_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_SMA_cl_1M))
+knn_train_res_1M <- bind_cols(knn_train_res_1M, SSD_train_1M %>% select(NVDA_SMA_cl_1M))
 
-knn_train_res_2M <- predict(knn_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+knn_train_res_2M <- predict(knn_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_SMA_cl_2M))
+knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_SMA_cl_2M))
 ```
 
 
@@ -1642,26 +1642,26 @@ knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_avg
 Root Mean Square Error (RMSE) results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rmse( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rmse( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rmse( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rmse( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rmse( NVDA_SMA_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rmse( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rmse( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rmse( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rmse( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rmse( NVDA_SMA_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rmse( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rmse( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rmse( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rmse( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rmse( NVDA_SMA_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rmse( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rmse( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rmse( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rmse( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rmse( NVDA_SMA_cl_2M, .pred))$.estimate)
        ) %>% 
   kable() %>% 
   kable_styling(full_width = F) %>% 
@@ -1673,26 +1673,26 @@ R^2 results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rsq( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rsq( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rsq( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rsq( NVDA_SMA_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rsq( NVDA_SMA_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rsq( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rsq( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rsq( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rsq( NVDA_SMA_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rsq( NVDA_SMA_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rsq( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rsq( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rsq( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rsq( NVDA_SMA_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rsq( NVDA_SMA_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rsq( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rsq( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rsq( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rsq( NVDA_SMA_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rsq( NVDA_SMA_cl_2M, .pred))$.estimate)
        ) %>% 
   kable() %>% 
   kable_styling(full_width = F) %>% 
