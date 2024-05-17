@@ -199,17 +199,17 @@ ggplot(data = Portfolio, aes(x=Date)) +
 While the six predictors provided by Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our stocks. The main kind of variables we wish to introduce are ones which simply keep track of data from previous days; since each predictor in our original data frame only applies to a 24-hour window, there could be some potentially important information in the long-term trends of a stock which ultimately affect a share's price.
 
 
-### n-day Average of Closing Price
+### Simple Moving Average of Closing Price
 
 As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors. 
 
-While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the n-day average and the n-day standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the value of n is (in our n-day average) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
+While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the simple moving average and the simple moving standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the window is (i.e. the number of days we are averaging over) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
 
 Additionally, there is no clear choice for how much previous data to account for — should the analysis look back at a single week's worth of data or a month? As this is itself an interesting question for the sake of tuning our models, **we will consider this an added hyperparameter for the problem** and consider four possible values: 1 week, 2 weeks, 1 month, and 2 months.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 
-running_average <- function(my_vec, num_days) {
+simple_moving_average <- function(my_vec, num_days) {
   #' Takes the running average of a column vector
   #'
   #' Creates a new column vector whose entries are the average of the previous num_days entries.
@@ -226,16 +226,16 @@ running_average <- function(my_vec, num_days) {
   
   # Error handling
   if(is.vector(my_vec) == FALSE){
-    stop("Not Vector: First argument of running_average must be a vector")
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
   }
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
   if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
-    stop("Not Integer: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   if(num_days <= 1){
-    stop("Not Large Enough: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
 
   # dummy variable to keep track of sums
@@ -262,34 +262,34 @@ running_average <- function(my_vec, num_days) {
   return(output_vec)
 }
 
-Portfolio$avg_cl_1W <- running_average(Portfolio$Close, 5)
-Portfolio$avg_cl_2W <- running_average(Portfolio$Close, 10)
-Portfolio$avg_cl_1M <- running_average(Portfolio$Close, 20)
-Portfolio$avg_cl_2M <- running_average(Portfolio$Close, 40)
+Portfolio$SMA_cl_1W <- simple_moving_average(Portfolio$Close, 5)
+Portfolio$SMA_cl_2W <- simple_moving_average(Portfolio$Close, 10)
+Portfolio$SMA_cl_1M <- simple_moving_average(Portfolio$Close, 20)
+Portfolio$SMA_cl_2M <- simple_moving_average(Portfolio$Close, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_cl_1W, color = 'red')) +
+  geom_line(aes(y = SMA_cl_1W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Week Average of Closing Price") +
   scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
   theme_dark()
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_cl_2W, color = 'red')) +
+  geom_line(aes(y = SMA_cl_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average of Closing Price") +
   scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
   theme_dark()
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_cl_1M, color = 'red')) +
+  geom_line(aes(y = SMA_cl_1M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Month Average of Closing Price") +
   scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
   theme_dark()
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_cl_2M, color = 'red')) +
+  geom_line(aes(y = SMA_cl_2M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Month Average of Closing Price") +
   scale_y_continuous(limits=c(1900, 5300), labels = label_comma()) +
@@ -303,12 +303,12 @@ One characteristic that immediately becomes apparent is that evaluating the runn
  
 
 
-### n-Day Standard Deviation
+### Simple Moving Standard Deviation of Closing Price
 
-With a concrete notion of the n-day average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-running_deviation <- function(my_vec, num_days) {
+simple_moving_deviation <- function(my_vec, num_days) {
   #' Takes the running standard deviation of a column vector
   #'
   #' Creates a new column vector whose entries are the standard deviation of the previous num_days entries.
@@ -325,20 +325,20 @@ running_deviation <- function(my_vec, num_days) {
   
   # Error handling
   if(is.vector(my_vec) == FALSE){
-    stop("Not Vector: First argument of running_average must be a vector")
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
   }
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
   if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
-    stop("Not Integer: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   if(num_days <= 1){
-    stop("Not Large Enough: Second argument of running_average must be an integer larger than or equal to 2")
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
   
   
-  run_avg = running_average(my_vec, num_days)
+  run_avg = simple_moving_average(my_vec, num_days)
 
   # dummy variable to keep track of sums
   sum_counter = 0
@@ -369,38 +369,38 @@ running_deviation <- function(my_vec, num_days) {
   return(output_vec)
 }
 
-Portfolio$std_dev_cl_1W <- running_deviation(Portfolio$Close, 5)
-Portfolio$std_dev_cl_2W <- running_deviation(Portfolio$Close, 10)
-Portfolio$std_dev_cl_1M <- running_deviation(Portfolio$Close, 20)
-Portfolio$std_dev_cl_2M <- running_deviation(Portfolio$Close, 40)
+Portfolio$SMSD_cl_1W <- simple_moving_deviation(Portfolio$Close, 5)
+Portfolio$SMSD_cl_2W <- simple_moving_deviation(Portfolio$Close, 10)
+Portfolio$SMSD_cl_1M <- simple_moving_deviation(Portfolio$Close, 20)
+Portfolio$SMSD_cl_2M <- simple_moving_deviation(Portfolio$Close, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_cl_1W, color = 'red')) +
+  geom_line(aes(y = SMSD_cl_1W, color = 'red')) +
   ylab('USD') + 
   scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
   ggtitle("Portfolio: 1-Week Standard Deviation of Closing Price") +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_cl_2W, color = 'red')) +
+  geom_line(aes(y = SMSD_cl_2W, color = 'red')) +
   ylab('USD') + 
   scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
   ggtitle("Portfolio: 2-Week Standard Deviation of Closing Price") +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_cl_1M, color = 'red')) +
+  geom_line(aes(y = SMSD_cl_1M, color = 'red')) +
   ylab('USD') + 
   scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
   ggtitle("Portfolio: 1-Month Standard Deviation of Closing Price") +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_cl_2M, color = 'red')) +
+  geom_line(aes(y = SMSD_cl_2M, color = 'red')) +
   ylab('USD') + 
   scale_y_continuous(limits=c(0, 520), labels = label_comma()) +
   ggtitle("Portfolio: 2-Month Standard Deviation of Closing Price") +
   theme_dark()
 ```
 
-### n-Day Average Return
+### Simple Moving Average of Return
 
 
 One of the main reasons someone invests in a stock is because they believe there is some sort of profit to be made based on the company's performance. On a day-to-day basis, this is simply measured by the difference between the closing price and the opening price — if the closing price is higher than the opening price, an investor theoretically increased their net worth that day (and vice versa). Although we are technically already measuring the average closing price, this does not account for possible downward trends since it is simply taking the average value of a set of prices; on the other hand, looking at the difference between opening and closing price gives some short-term insight into the overall trend of a stock on a daily basis.
@@ -412,68 +412,68 @@ One of the main reasons someone invests in a stock is because they believe there
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 Portfolio$Return <- (Portfolio$Close - Portfolio$Open)
 
-Portfolio$avg_ret_1W <- running_average(Portfolio$Return, 5)
-Portfolio$avg_ret_2W <- running_average(Portfolio$Return, 10)
-Portfolio$avg_ret_1M <- running_average(Portfolio$Return, 20)
-Portfolio$avg_ret_2M <- running_average(Portfolio$Return, 40)
+Portfolio$SMA_ret_1W <- simple_moving_average(Portfolio$Return, 5)
+Portfolio$SMA_ret_2W <- simple_moving_average(Portfolio$Return, 10)
+Portfolio$SMA_ret_1M <- simple_moving_average(Portfolio$Return, 20)
+Portfolio$SMA_ret_2M <- simple_moving_average(Portfolio$Return, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_ret_1W, color = 'red')) +
+  geom_line(aes(y = SMA_ret_1W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Week Average Return") +
   scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_ret_2W, color = 'red')) +
+  geom_line(aes(y = SMA_ret_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average Return") +
   scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_ret_1M, color = 'red')) +
+  geom_line(aes(y = SMA_ret_1M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Month Average Return") +
   scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_ret_2M, color = 'red')) +
+  geom_line(aes(y = SMA_ret_2M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Month Average Return") +
   scale_y_continuous(limits=c(-80, 80), labels = label_comma()) +
   theme_dark()
 ```
 
-### n-Day Return Standard Deviation
+### Simple Moving Standard Deviation of Return
 
 
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-Portfolio$std_dev_ret_1W <- running_deviation(Portfolio$Return, 5)
-Portfolio$std_dev_ret_2W <- running_deviation(Portfolio$Return, 10)
-Portfolio$std_dev_ret_1M <- running_deviation(Portfolio$Return, 20)
-Portfolio$std_dev_ret_2M <- running_deviation(Portfolio$Return, 40)
+Portfolio$SMSD_ret_1W <- simple_moving_deviation(Portfolio$Return, 5)
+Portfolio$SMSD_ret_2W <- simple_moving_deviation(Portfolio$Return, 10)
+Portfolio$SMSD_ret_1M <- simple_moving_deviation(Portfolio$Return, 20)
+Portfolio$SMSD_ret_2M <- simple_moving_deviation(Portfolio$Return, 40)
 
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_ret_1W, color = 'red')) +
+  geom_line(aes(y = SMSD_ret_1W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Week Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_ret_2W, color = 'red')) +
+  geom_line(aes(y = SMSD_ret_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_ret_1M, color = 'red')) +
+  geom_line(aes(y = SMSD_ret_1M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Month Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_ret_2M, color = 'red')) +
+  geom_line(aes(y = SMSD_ret_2M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Month Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 125), labels = label_comma()) +
@@ -481,35 +481,35 @@ ggplot(data = Portfolio, aes(x=Date)) +
 ```
 
 
-### n-Day Average Volume
+### Simple Moving Average Volume
 
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-Portfolio$avg_vol_1W <- running_average(Portfolio$Volume, 5)
-Portfolio$avg_vol_2W <- running_average(Portfolio$Volume, 10)
-Portfolio$avg_vol_1M <- running_average(Portfolio$Volume, 20)
-Portfolio$avg_vol_2M <- running_average(Portfolio$Volume, 40)
+Portfolio$SMA_vol_1W <- simple_moving_average(Portfolio$Volume, 5)
+Portfolio$SMA_vol_2W <- simple_moving_average(Portfolio$Volume, 10)
+Portfolio$SMA_vol_1M <- simple_moving_average(Portfolio$Volume, 20)
+Portfolio$SMA_vol_2M <- simple_moving_average(Portfolio$Volume, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_vol_1W, color = 'red')) +
+  geom_line(aes(y = SMA_vol_1W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Week Average Volume") +
   scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_vol_2W, color = 'red')) +
+  geom_line(aes(y = SMA_vol_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Average Volume") +
   scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_vol_1M, color = 'red')) +
+  geom_line(aes(y = SMA_vol_1M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Month Average Volume") +
   scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = avg_vol_2M, color = 'red')) +
+  geom_line(aes(y = SMA_vol_2M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Month Average Volume") +
   scale_y_continuous(limits=c(100000000, 350000000), labels = label_comma()) +
@@ -517,35 +517,35 @@ ggplot(data = Portfolio, aes(x=Date)) +
 ```
 
 
-### n-Day Volume Standard Deviation
+### Simple Moving Standard Deviation of Volume
 
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-Portfolio$std_dev_vol_1W <- running_deviation(Portfolio$Volume, 5)
-Portfolio$std_dev_vol_2W <- running_deviation(Portfolio$Volume, 10)
-Portfolio$std_dev_vol_1M <- running_deviation(Portfolio$Volume, 20)
-Portfolio$std_dev_vol_2M <- running_deviation(Portfolio$Volume, 40)
+Portfolio$SMSD_vol_1W <- simple_moving_deviation(Portfolio$Volume, 5)
+Portfolio$SMSD_vol_2W <- simple_moving_deviation(Portfolio$Volume, 10)
+Portfolio$SMSD_vol_1M <- simple_moving_deviation(Portfolio$Volume, 20)
+Portfolio$SMSD_vol_2M <- simple_moving_deviation(Portfolio$Volume, 40)
 
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_vol_1W, color = 'red')) +
+  geom_line(aes(y = SMSD_vol_1W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Week Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_vol_2W, color = 'red')) +
+  geom_line(aes(y = SMSD_vol_2W, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Week Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_vol_1M, color = 'red')) +
+  geom_line(aes(y = SMSD_vol_1M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 1-Month Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
   theme_dark()
 ggplot(data = Portfolio, aes(x=Date)) +
-  geom_line(aes(y = std_dev_vol_2M, color = 'red')) +
+  geom_line(aes(y = SMSD_vol_2M, color = 'red')) +
   ylab('USD') + 
   ggtitle("Portfolio: 2-Month Standard Deviation of Return") +
   scale_y_continuous(limits=c(0, 120000000), labels = label_comma()) +
@@ -584,27 +584,27 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 Portfolio_split_1W <- initial_split(Portfolio, prop = 0.7,
-                                strata = avg_cl_1W)
+                                strata = SMA_cl_1W)
 Portfolio_train_1W <- training(Portfolio_split_1W)
 Portfolio_test_1W <- testing(Portfolio_split_1W)
 
 
 Portfolio_split_2W <- initial_split(Portfolio, prop = 0.7,
-                                strata = avg_cl_2W)
+                                strata = SMA_cl_2W)
 Portfolio_train_2W <- training(Portfolio_split_2W)
 Portfolio_test_2W <- testing(Portfolio_split_2W)
 
 
 
 Portfolio_split_1M <- initial_split(Portfolio, prop = 0.7,
-                                strata = avg_cl_1M)
+                                strata = SMA_cl_1M)
 Portfolio_train_1M <- training(Portfolio_split_1M)
 Portfolio_test_1M <- testing(Portfolio_split_1M)
 
 
 
 Portfolio_split_2M <- initial_split(Portfolio, prop = 0.7,
-                                strata = avg_cl_2M)
+                                strata = SMA_cl_2M)
 Portfolio_train_2M <- training(Portfolio_split_2M)
 Portfolio_test_2M <- testing(Portfolio_split_2M)
 ```
@@ -613,30 +613,30 @@ Portfolio_test_2M <- testing(Portfolio_split_2M)
 ## One-Week Model Fitting
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
- Portfolio_recipe_1W = recipe(avg_cl_1W ~ std_dev_cl_1W +
-                                avg_ret_1W + std_dev_ret_1W +
-                                avg_vol_1W + std_dev_vol_1W,
+ Portfolio_recipe_1W = recipe(SMA_cl_1W ~ SMSD_cl_1W +
+                                SMA_ret_1W + SMSD_ret_1W +
+                                SMA_vol_1W + SMSD_vol_1W,
                      data=Portfolio_train_1W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
- Portfolio_recipe_2W = recipe(avg_cl_2W ~ std_dev_cl_2W +
-                                avg_ret_2W + std_dev_ret_2W +
-                                avg_vol_2W + std_dev_vol_2W,
+ Portfolio_recipe_2W = recipe(SMA_cl_2W ~ SMSD_cl_2W +
+                                SMA_ret_2W + SMSD_ret_2W +
+                                SMA_vol_2W + SMSD_vol_2W,
                      data=Portfolio_train_2W) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
 
- Portfolio_recipe_1M = recipe(avg_cl_1M ~ std_dev_cl_1M +
-                                avg_ret_1M + std_dev_ret_1M +
-                                avg_vol_1M + std_dev_vol_1M,
+ Portfolio_recipe_1M = recipe(SMA_cl_1M ~ SMSD_cl_1M +
+                                SMA_ret_1M + SMSD_ret_1M +
+                                SMA_vol_1M + SMSD_vol_1M,
                      data=Portfolio_train_1M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
   
- Portfolio_recipe_2M = recipe(avg_cl_2M ~ std_dev_cl_2M +
-                                avg_ret_2M + std_dev_ret_2M +
-                                avg_vol_2M + std_dev_vol_2M,
+ Portfolio_recipe_2M = recipe(SMA_cl_2M ~ SMSD_cl_2M +
+                                SMA_ret_2M + SMSD_ret_2M +
+                                SMA_vol_2M + SMSD_vol_2M,
                      data=Portfolio_train_2M) %>%
   step_center(all_predictors()) %>% 
   step_scale(all_predictors())
@@ -647,10 +647,10 @@ Portfolio_test_2M <- testing(Portfolio_split_2M)
 ## k-Fold Cross Validation
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-Portfolio_folds_1W <- vfold_cv(Portfolio_train_1W, v = 10, strata = avg_cl_1W)
-Portfolio_folds_2W <- vfold_cv(Portfolio_train_2W, v = 10, strata = avg_cl_2W)
-Portfolio_folds_1M <- vfold_cv(Portfolio_train_1M, v = 10, strata = avg_cl_1M)
-Portfolio_folds_2M <- vfold_cv(Portfolio_train_2M, v = 10, strata = avg_cl_2M)
+Portfolio_folds_1W <- vfold_cv(Portfolio_train_1W, v = 10, strata = SMA_cl_1W)
+Portfolio_folds_2W <- vfold_cv(Portfolio_train_2W, v = 10, strata = SMA_cl_2W)
+Portfolio_folds_1M <- vfold_cv(Portfolio_train_1M, v = 10, strata = SMA_cl_1M)
+Portfolio_folds_2M <- vfold_cv(Portfolio_train_2M, v = 10, strata = SMA_cl_2M)
 ```
 
 
@@ -990,71 +990,71 @@ knn_fit_2M <- fit(knn_final_wflow_2M, Portfolio_train_2M)
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Training 
-lm_train_res_1W <- predict(lm_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
-lm_train_res_1W <- bind_cols(lm_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
+lm_train_res_1W <- predict(lm_fit_1W, new_data = Portfolio_train_1W %>% select(-SMA_cl_1W))
+lm_train_res_1W <- bind_cols(lm_train_res_1W, Portfolio_train_1W %>% select(SMA_cl_1W))
 
-lm_train_res_2W <- predict(lm_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
-lm_train_res_2W <- bind_cols(lm_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
+lm_train_res_2W <- predict(lm_fit_2W, new_data = Portfolio_train_2W %>% select(-SMA_cl_2W))
+lm_train_res_2W <- bind_cols(lm_train_res_2W, Portfolio_train_2W %>% select(SMA_cl_2W))
 
-lm_train_res_1M <- predict(lm_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
-lm_train_res_1M <- bind_cols(lm_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
+lm_train_res_1M <- predict(lm_fit_1M, new_data = Portfolio_train_1M %>% select(-SMA_cl_1M))
+lm_train_res_1M <- bind_cols(lm_train_res_1M, Portfolio_train_1M %>% select(SMA_cl_1M))
 
-lm_train_res_2M <- predict(lm_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
-lm_train_res_2M <- bind_cols(lm_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
+lm_train_res_2M <- predict(lm_fit_2M, new_data = Portfolio_train_2M %>% select(-SMA_cl_2M))
+lm_train_res_2M <- bind_cols(lm_train_res_2M, Portfolio_train_2M %>% select(SMA_cl_2M))
 
 
 # Ridge Regression Training
-ridge_train_res_1W <- predict(ridge_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
-ridge_train_res_1W <- bind_cols(ridge_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
+ridge_train_res_1W <- predict(ridge_fit_1W, new_data = Portfolio_train_1W %>% select(-SMA_cl_1W))
+ridge_train_res_1W <- bind_cols(ridge_train_res_1W, Portfolio_train_1W %>% select(SMA_cl_1W))
 
-ridge_train_res_2W <- predict(ridge_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
-ridge_train_res_2W <- bind_cols(ridge_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
+ridge_train_res_2W <- predict(ridge_fit_2W, new_data = Portfolio_train_2W %>% select(-SMA_cl_2W))
+ridge_train_res_2W <- bind_cols(ridge_train_res_2W, Portfolio_train_2W %>% select(SMA_cl_2W))
 
-ridge_train_res_1M <- predict(ridge_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
-ridge_train_res_1M <- bind_cols(ridge_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
+ridge_train_res_1M <- predict(ridge_fit_1M, new_data = Portfolio_train_1M %>% select(-SMA_cl_1M))
+ridge_train_res_1M <- bind_cols(ridge_train_res_1M, Portfolio_train_1M %>% select(SMA_cl_1M))
 
-ridge_train_res_2M <- predict(ridge_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
-ridge_train_res_2M <- bind_cols(ridge_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
+ridge_train_res_2M <- predict(ridge_fit_2M, new_data = Portfolio_train_2M %>% select(-SMA_cl_2M))
+ridge_train_res_2M <- bind_cols(ridge_train_res_2M, Portfolio_train_2M %>% select(SMA_cl_2M))
 
 
 # Lasso Regression Training
-lasso_train_res_1W <- predict(lasso_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
-lasso_train_res_1W <- bind_cols(lasso_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
+lasso_train_res_1W <- predict(lasso_fit_1W, new_data = Portfolio_train_1W %>% select(-SMA_cl_1W))
+lasso_train_res_1W <- bind_cols(lasso_train_res_1W, Portfolio_train_1W %>% select(SMA_cl_1W))
 
-lasso_train_res_2W <- predict(lasso_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
-lasso_train_res_2W <- bind_cols(lasso_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
+lasso_train_res_2W <- predict(lasso_fit_2W, new_data = Portfolio_train_2W %>% select(-SMA_cl_2W))
+lasso_train_res_2W <- bind_cols(lasso_train_res_2W, Portfolio_train_2W %>% select(SMA_cl_2W))
 
-lasso_train_res_1M <- predict(lasso_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
-lasso_train_res_1M <- bind_cols(lasso_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
+lasso_train_res_1M <- predict(lasso_fit_1M, new_data = Portfolio_train_1M %>% select(-SMA_cl_1M))
+lasso_train_res_1M <- bind_cols(lasso_train_res_1M, Portfolio_train_1M %>% select(SMA_cl_1M))
 
-lasso_train_res_2M <- predict(lasso_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
-lasso_train_res_2M <- bind_cols(lasso_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
+lasso_train_res_2M <- predict(lasso_fit_2M, new_data = Portfolio_train_2M %>% select(-SMA_cl_2M))
+lasso_train_res_2M <- bind_cols(lasso_train_res_2M, Portfolio_train_2M %>% select(SMA_cl_2M))
 
 # Elastic Net Training
-elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
-elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
+elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = Portfolio_train_1W %>% select(-SMA_cl_1W))
+elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, Portfolio_train_1W %>% select(SMA_cl_1W))
 
-elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
-elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
+elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = Portfolio_train_2W %>% select(-SMA_cl_2W))
+elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, Portfolio_train_2W %>% select(SMA_cl_2W))
 
-elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
-elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
+elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = Portfolio_train_1M %>% select(-SMA_cl_1M))
+elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, Portfolio_train_1M %>% select(SMA_cl_1M))
 
-elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
-elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
+elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = Portfolio_train_2M %>% select(-SMA_cl_2M))
+elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, Portfolio_train_2M %>% select(SMA_cl_2M))
 
 # k-Nearest Neighbors Training
-knn_train_res_1W <- predict(knn_fit_1W, new_data = Portfolio_train_1W %>% select(-avg_cl_1W))
-knn_train_res_1W <- bind_cols(knn_train_res_1W, Portfolio_train_1W %>% select(avg_cl_1W))
+knn_train_res_1W <- predict(knn_fit_1W, new_data = Portfolio_train_1W %>% select(-SMA_cl_1W))
+knn_train_res_1W <- bind_cols(knn_train_res_1W, Portfolio_train_1W %>% select(SMA_cl_1W))
 
-knn_train_res_2W <- predict(knn_fit_2W, new_data = Portfolio_train_2W %>% select(-avg_cl_2W))
-knn_train_res_2W <- bind_cols(knn_train_res_2W, Portfolio_train_2W %>% select(avg_cl_2W))
+knn_train_res_2W <- predict(knn_fit_2W, new_data = Portfolio_train_2W %>% select(-SMA_cl_2W))
+knn_train_res_2W <- bind_cols(knn_train_res_2W, Portfolio_train_2W %>% select(SMA_cl_2W))
 
-knn_train_res_1M <- predict(knn_fit_1M, new_data = Portfolio_train_1M %>% select(-avg_cl_1M))
-knn_train_res_1M <- bind_cols(knn_train_res_1M, Portfolio_train_1M %>% select(avg_cl_1M))
+knn_train_res_1M <- predict(knn_fit_1M, new_data = Portfolio_train_1M %>% select(-SMA_cl_1M))
+knn_train_res_1M <- bind_cols(knn_train_res_1M, Portfolio_train_1M %>% select(SMA_cl_1M))
 
-knn_train_res_2M <- predict(knn_fit_2M, new_data = Portfolio_train_2M %>% select(-avg_cl_2M))
-knn_train_res_2M <- bind_cols(knn_train_res_2M, Portfolio_train_2M %>% select(avg_cl_2M))
+knn_train_res_2M <- predict(knn_fit_2M, new_data = Portfolio_train_2M %>% select(-SMA_cl_2M))
+knn_train_res_2M <- bind_cols(knn_train_res_2M, Portfolio_train_2M %>% select(SMA_cl_2M))
 ```
 
 
@@ -1064,26 +1064,26 @@ knn_train_res_2M <- bind_cols(knn_train_res_2M, Portfolio_train_2M %>% select(av
 Root Mean Square Error (RMSE) results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rmse( avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rmse( avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rmse( avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rmse( avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rmse( SMA_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rmse( SMA_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rmse( SMA_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rmse( SMA_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rmse( SMA_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rmse( SMA_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rmse( SMA_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rmse( SMA_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rmse( SMA_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rmse( SMA_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rmse( SMA_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rmse( SMA_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rmse( SMA_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rmse( SMA_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rmse( SMA_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rmse( SMA_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rmse( SMA_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rmse( SMA_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rmse( SMA_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rmse( SMA_cl_2M, .pred))$.estimate)
        )
 ```
 
@@ -1092,25 +1092,25 @@ R^2 results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
-                    (ridge_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
-                    (lasso_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
-                    (elastic_net_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate,
-                    (knn_train_res_1W %>% rsq( avg_cl_1W, .pred))$.estimate ),
-       Two_Week = c((lm_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
-                    (ridge_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
-                    (lasso_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
-                    (elastic_net_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate,
-                    (knn_train_res_2W %>% rsq( avg_cl_2W, .pred))$.estimate),
-       One_Month = c((lm_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
-                    (ridge_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
-                    (lasso_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
-                    (elastic_net_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate,
-                    (knn_train_res_1M %>% rsq( avg_cl_1M, .pred))$.estimate),
-       Two_Month = c((lm_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
-                    (ridge_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
-                    (lasso_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
-                    (elastic_net_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate,
-                    (knn_train_res_2M %>% rsq( avg_cl_2M, .pred))$.estimate)
+       One_Week = c((lm_train_res_1W %>% rsq( SMA_cl_1W, .pred))$.estimate,
+                    (ridge_train_res_1W %>% rsq( SMA_cl_1W, .pred))$.estimate,
+                    (lasso_train_res_1W %>% rsq( SMA_cl_1W, .pred))$.estimate,
+                    (elastic_net_train_res_1W %>% rsq( SMA_cl_1W, .pred))$.estimate,
+                    (knn_train_res_1W %>% rsq( SMA_cl_1W, .pred))$.estimate ),
+       Two_Week = c((lm_train_res_2W %>% rsq( SMA_cl_2W, .pred))$.estimate,
+                    (ridge_train_res_2W %>% rsq( SMA_cl_2W, .pred))$.estimate,
+                    (lasso_train_res_2W %>% rsq( SMA_cl_2W, .pred))$.estimate,
+                    (elastic_net_train_res_2W %>% rsq( SMA_cl_2W, .pred))$.estimate,
+                    (knn_train_res_2W %>% rsq( SMA_cl_2W, .pred))$.estimate),
+       One_Month = c((lm_train_res_1M %>% rsq( SMA_cl_1M, .pred))$.estimate,
+                    (ridge_train_res_1M %>% rsq( SMA_cl_1M, .pred))$.estimate,
+                    (lasso_train_res_1M %>% rsq( SMA_cl_1M, .pred))$.estimate,
+                    (elastic_net_train_res_1M %>% rsq( SMA_cl_1M, .pred))$.estimate,
+                    (knn_train_res_1M %>% rsq( SMA_cl_1M, .pred))$.estimate),
+       Two_Month = c((lm_train_res_2M %>% rsq( SMA_cl_2M, .pred))$.estimate,
+                    (ridge_train_res_2M %>% rsq( SMA_cl_2M, .pred))$.estimate,
+                    (lasso_train_res_2M %>% rsq( SMA_cl_2M, .pred))$.estimate,
+                    (elastic_net_train_res_2M %>% rsq( SMA_cl_2M, .pred))$.estimate,
+                    (knn_train_res_2M %>% rsq( SMA_cl_2M, .pred))$.estimate)
        )
 ```
