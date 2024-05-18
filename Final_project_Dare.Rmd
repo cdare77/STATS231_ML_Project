@@ -34,7 +34,7 @@ library(yardstick)
 library(visdat)
 library(scales)
 library(glmnet)
-
+library(TTR)
 
 tidymodels_prefer()
 conflicted::conflicts_prefer(yardstick::rsq)
@@ -300,19 +300,19 @@ Additionally, there is no clear choice for how much previous data to account for
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 
-simple_moving_average <- function(my_vec, num_days) {
+simple_moving_average <- function(my_vec, lag_period) {
   #' Takes the running average of a column vector
   #'
-  #' Creates a new column vector whose entries are the average of the previous num_days entries.
-  #' When not enough data is available to take the average over num_days, the closest possible 
-  #' average will be taken (for example, if num_days = 10, then the first 2nd entry of the output
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
   #' vector will simply be the average of the first two values, the 3rd entry of the output vector
   #' will be the average of the first three values, and so forth.)
   #'
   #' @param my_vec the column vector to take the average values of
-  #' @param num_days the number of days one wishes to average over
+  #' @param lag_period the number of days one wishes to average over
   #' 
-  #' @return A vector whose entries represent the average of the previous num_days entries in my_vec
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
   
   
   # Error handling
@@ -322,32 +322,24 @@ simple_moving_average <- function(my_vec, num_days) {
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
-  if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
     stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
-  if(num_days <= 1){
+  if(lag_period <= 1){
     stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
-
-  # dummy variable to keep track of sums
-  sum_counter = 0
+ 
   # return variable
   output_vec = c()
   for (i in 1:length(my_vec)) {
-    
-    # If there are less that num_days of data previous to the current date,
+    # If there are less that lag_period of data previous to the current date,
     # simply take the average of all the days prior to get the closest thing
     # to a running average
-    if (i <= num_days){
-      sum_counter = sum_counter + my_vec[i]
-      output_vec[i] = sum_counter / i
+    if (i <= lag_period){
+      output_vec[i] = mean(my_vec[1:i])
     }
     else {
-      # Add the next day to the sum
-      sum_counter = sum_counter + my_vec[i]
-      # Subtract the data from two weeks prior
-      sum_counter = sum_counter - my_vec[i-num_days]
-      output_vec[i] = sum_counter / num_days
+      output_vec[i] = mean(my_vec[(i-lag_period + 1):i])
     }
   }
   return(output_vec)
@@ -498,24 +490,25 @@ ggplot(data = SSD, aes(x=Date)) +
   theme_dark()
 ```
 
-### Simple Moving Standard Deviation of Closing Price
 
-With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+ 
+### Exponential Moving Average
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
-simple_moving_deviation <- function(my_vec, num_days) {
-  #' Takes the running standard deviation of a column vector
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+exponential_moving_average_helper <- function(my_vec, lag_period, smoothing_factor) {
+  #' Helper function to evaluate the exponential moving average over a fixed period 
+  #' using an array buffer
   #'
-  #' Creates a new column vector whose entries are the standard deviation of the previous num_days entries.
-  #' When not enough data is available to take the deviation over num_days, the closest possible 
-  #' average will be taken (for example, if num_days = 10, then the first 2nd entry of the output
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
   #' vector will simply be the average of the first two values, the 3rd entry of the output vector
   #' will be the average of the first three values, and so forth.)
   #'
-  #' @param my_vec the column vector to take the standard deviation of
-  #' @param num_days the number of days one wishes to average over
+  #' @param my_vec the column vector to take the average values of
+  #' @param lag_period the number of days one wishes to average over
   #' 
-  #' @return A vector whose entries represent the standard deviation of the previous num_days entries in my_vec
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
   
   
   # Error handling
@@ -525,18 +518,166 @@ simple_moving_deviation <- function(my_vec, num_days) {
   if(is.numeric(my_vec[1]) == FALSE){
     stop("Non-numeric Entries: values of vector in first argument must be numeric.")
   }
-  if(is.numeric(num_days) == FALSE || num_days != round(num_days)){
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
     stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
-  if(num_days <= 1){
+  if(lag_period <= 1){
     stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
   }
+ 
+  vec_len <- length(my_vec)
+  output_vec <- c()
+  output_vec[1] <- my_vec[1]
   
+  for (i in 2:vec_len) {
+    output_vec[i] <- smoothing_factor * my_vec[i] + (1 - smoothing_factor) * output_vec[i-1]
+  }
   
-  run_avg = simple_moving_average(my_vec, num_days)
+  return(output_vec[vec_len])
+}
 
-  # dummy variable to keep track of sums
-  sum_counter = 0
+exponential_moving_average <- function(my_vec, lag_period) {
+  #' Takes the running average of a column vector
+  #'
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the average values of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+ 
+  output_vec <- c()
+  output_vec[1] <- my_vec[1]
+  smoothing_factor = 2/(lag_period+1)
+  for (i in 2:length(my_vec)) {
+    # If there are less that lag_period of data previous to the current date,
+    # simply take the average of all the days prior to get the closest thing
+    # to a running average
+    if (i <= lag_period){
+      output_vec[i] = exponential_moving_average_helper(my_vec[1:i], i, 2/(i + 1))
+    }
+    else {
+      output_vec[i] = exponential_moving_average_helper(my_vec[(i-lag_period + 1):i], lag_period, smoothing_factor)
+    }
+  }
+  
+  return(output_vec)
+}
+
+
+SSD$NVDA_EMA_cl_1W <- exponential_moving_average(SSD$NVDA_Close, 5)
+SSD$TSM_EMA_cl_1W <- exponential_moving_average(SSD$TSM_Close, 5)
+SSD$NXPI_EMA_cl_1W <- exponential_moving_average(SSD$NXPI_Close, 5)
+SSD$QCOM_EMA_cl_1W <- exponential_moving_average(SSD$QCOM_Close, 5)
+SSD$MPWR_EMA_cl_1W <- exponential_moving_average(SSD$MPWR_Close, 5)
+SSD$ON_EMA_cl_1W <- exponential_moving_average(SSD$ON_Close, 5)
+SSD$AMD_EMA_cl_1W <- exponential_moving_average(SSD$AMD_Close, 5)
+SSD$INTC_EMA_cl_1W <- exponential_moving_average(SSD$INTC_Close, 5)
+SSD$AVGO_EMA_cl_1W <- exponential_moving_average(SSD$AVGO_Close, 5)
+SSD$ASML_EMA_cl_1W <- exponential_moving_average(SSD$ASML_Close, 5)
+SSD$AMAT_EMA_cl_1W <- exponential_moving_average(SSD$AMAT_Close, 5)
+SSD$TXN_EMA_cl_1W <- exponential_moving_average(SSD$TXN_Close, 5)
+
+
+SSD$NVDA_EMA_cl_2W <- exponential_moving_average(SSD$NVDA_Close, 10)
+SSD$TSM_EMA_cl_2W <- exponential_moving_average(SSD$TSM_Close, 10)
+SSD$NXPI_EMA_cl_2W <- exponential_moving_average(SSD$NXPI_Close, 10)
+SSD$QCOM_EMA_cl_2W <- exponential_moving_average(SSD$QCOM_Close, 10)
+SSD$MPWR_EMA_cl_2W <- exponential_moving_average(SSD$MPWR_Close, 10)
+SSD$ON_EMA_cl_2W <- exponential_moving_average(SSD$ON_Close, 10)
+SSD$AMD_EMA_cl_2W <- exponential_moving_average(SSD$AMD_Close, 10)
+SSD$INTC_EMA_cl_2W <- exponential_moving_average(SSD$INTC_Close, 10)
+SSD$AVGO_EMA_cl_2W <- exponential_moving_average(SSD$AVGO_Close, 10)
+SSD$ASML_EMA_cl_2W <- exponential_moving_average(SSD$ASML_Close, 10)
+SSD$AMAT_EMA_cl_2W <- exponential_moving_average(SSD$AMAT_Close, 10)
+SSD$TXN_EMA_cl_2W <- exponential_moving_average(SSD$TXN_Close, 10)
+
+SSD$NVDA_EMA_cl_1M <- exponential_moving_average(SSD$NVDA_Close, 20)
+SSD$TSM_EMA_cl_1M <- exponential_moving_average(SSD$TSM_Close, 20)
+SSD$NXPI_EMA_cl_1M <- exponential_moving_average(SSD$NXPI_Close, 20)
+SSD$QCOM_EMA_cl_1M <- exponential_moving_average(SSD$QCOM_Close, 20)
+SSD$MPWR_EMA_cl_1M <- exponential_moving_average(SSD$MPWR_Close, 20)
+SSD$ON_EMA_cl_1M <- exponential_moving_average(SSD$ON_Close, 20)
+SSD$AMD_EMA_cl_1M <- exponential_moving_average(SSD$AMD_Close, 20)
+SSD$INTC_EMA_cl_1M <- exponential_moving_average(SSD$INTC_Close, 20)
+SSD$AVGO_EMA_cl_1M <- exponential_moving_average(SSD$AVGO_Close, 20)
+SSD$ASML_EMA_cl_1M <- exponential_moving_average(SSD$ASML_Close, 20)
+SSD$AMAT_EMA_cl_1M <- exponential_moving_average(SSD$AMAT_Close, 20)
+SSD$TXN_EMA_cl_1M <- exponential_moving_average(SSD$TXN_Close, 20)
+
+SSD$NVDA_EMA_cl_2M <- exponential_moving_average(SSD$NVDA_Close, 40)
+SSD$TSM_EMA_cl_2M <- exponential_moving_average(SSD$TSM_Close, 40)
+SSD$NXPI_EMA_cl_2M <- exponential_moving_average(SSD$NXPI_Close, 40)
+SSD$QCOM_EMA_cl_2M <- exponential_moving_average(SSD$QCOM_Close, 40)
+SSD$MPWR_EMA_cl_2M <- exponential_moving_average(SSD$MPWR_Close, 40)
+SSD$ON_EMA_cl_2M <- exponential_moving_average(SSD$ON_Close, 40)
+SSD$AMD_EMA_cl_2M <- exponential_moving_average(SSD$AMD_Close, 40)
+SSD$INTC_EMA_cl_2M <- exponential_moving_average(SSD$INTC_Close, 40)
+SSD$AVGO_EMA_cl_2M <- exponential_moving_average(SSD$AVGO_Close, 40)
+SSD$ASML_EMA_cl_2M <- exponential_moving_average(SSD$ASML_Close, 40)
+SSD$AMAT_EMA_cl_2M <- exponential_moving_average(SSD$AMAT_Close, 40)
+SSD$TXN_EMA_cl_2M <- exponential_moving_average(SSD$TXN_Close, 40)
+
+SSD %>% select( TXN_Close, TXN_SMA_cl_1W, TXN_EMA_cl_1W) %>% head(40)
+```
+
+
+
+
+
+### Simple Moving Standard Deviation of Closing Price
+
+With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+simple_moving_deviation <- function(my_vec, lag_period) {
+  #' Takes the running standard deviation of a column vector
+  #'
+  #' Creates a new column vector whose entries are the standard deviation of the previous lag_period entries.
+  #' When not enough data is available to take the deviation over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the standard deviation of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the standard deviation of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+
   # return variable
   output_vec = c()
   
@@ -546,19 +687,14 @@ simple_moving_deviation <- function(my_vec, num_days) {
   output_vec[1] = 0
   for (i in 2:length(my_vec)) {
     
-    # If there are less that num_days of data previous to the current date,
+    # If there are less that lag_period of data previous to the current date,
     # simply take the average of all the days prior to get the closest thing
     # to a running average
-    if (i <= num_days){
-      sum_counter = sum_counter + (my_vec[i] - run_avg[i])**2
-      output_vec[i] = sqrt((sum_counter / (i-1)))
+    if (i <= lag_period){
+       output_vec[i] = sd(my_vec[1:i])
     }
     else {
-      # Add the next day to the sum
-      sum_counter = sum_counter + (my_vec[i] - run_avg[i])**2
-      # Subtract the data from num_days prior
-      sum_counter = sum_counter - (my_vec[(i - num_days)] - run_avg[(i-num_days)])**2
-      output_vec[i] = sqrt((sum_counter / (num_days-1)))
+      output_vec[i] = sd(my_vec[(i-lag_period+1):i])
     }
   }
   return(output_vec)
