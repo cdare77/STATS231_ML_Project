@@ -51,8 +51,10 @@ All stock market data was obtained from [Yahoo Finance](https://finance.yahoo.co
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE}
 loadSymbols("AMD", from="2023-01-01")
-AMD = data.frame(AMD)
 chartSeries(AMD,TA=c(addVo(),addBBands(),addMACD()))
+my_dates <- index(AMD)
+AMD <- data.frame(AMD)
+AMD$AMD.Date <- my_dates
 ```
 
 
@@ -119,21 +121,6 @@ AMD$AMD.Close_L11 <- lag(AMD$AMD.Close, 11)
 AMD$AMD.Close_L12 <- lag(AMD$AMD.Close, 12)
 AMD$AMD.Close_L13 <- lag(AMD$AMD.Close, 13)
 AMD$AMD.Close_L14 <- lag(AMD$AMD.Close, 14)
-AMD$AMD.Close_L15 <- lag(AMD$AMD.Close, 15)
-AMD$AMD.Close_L16 <- lag(AMD$AMD.Close, 16)
-AMD$AMD.Close_L17 <- lag(AMD$AMD.Close, 17)
-AMD$AMD.Close_L18 <- lag(AMD$AMD.Close, 18)
-AMD$AMD.Close_L19 <- lag(AMD$AMD.Close, 19)
-AMD$AMD.Close_L20 <- lag(AMD$AMD.Close, 20)
-AMD$AMD.Close_L21 <- lag(AMD$AMD.Close, 21)
-AMD$AMD.Close_L22 <- lag(AMD$AMD.Close, 22)
-AMD$AMD.Close_L23 <- lag(AMD$AMD.Close, 23)
-AMD$AMD.Close_L24 <- lag(AMD$AMD.Close, 24)
-AMD$AMD.Close_L25 <- lag(AMD$AMD.Close, 25)
-AMD$AMD.Close_L26 <- lag(AMD$AMD.Close, 26)
-AMD$AMD.Close_L27 <- lag(AMD$AMD.Close, 27)
-AMD$AMD.Close_L28 <- lag(AMD$AMD.Close, 28)
-AMD$AMD.Close_L29 <- lag(AMD$AMD.Close, 29)
 
 
 AMD <- AMD %>%
@@ -150,30 +137,316 @@ AMD <- AMD %>%
   fill(AMD.Close_L11, .direction = "up") %>%
   fill(AMD.Close_L12, .direction = "up") %>%
   fill(AMD.Close_L13, .direction = "up") %>% 
-  fill(AMD.Close_L14, .direction = "up") %>% 
-  fill(AMD.Close_L15, .direction = "up") %>% 
-  fill(AMD.Close_L16, .direction = "up") %>% 
-  fill(AMD.Close_L17, .direction = "up") %>% 
-  fill(AMD.Close_L18, .direction = "up") %>% 
-  fill(AMD.Close_L19, .direction = "up") %>% 
-  fill(AMD.Close_L20, .direction = "up") %>%
-  fill(AMD.Close_L21, .direction = "up") %>%
-  fill(AMD.Close_L22, .direction = "up") %>%
-  fill(AMD.Close_L23, .direction = "up") %>% 
-  fill(AMD.Close_L24, .direction = "up") %>% 
-  fill(AMD.Close_L25, .direction = "up") %>% 
-  fill(AMD.Close_L26, .direction = "up") %>% 
-  fill(AMD.Close_L27, .direction = "up") %>% 
-  fill(AMD.Close_L28, .direction = "up") %>% 
-  fill(AMD.Close_L29, .direction = "up") 
-
-
-
-select(tail(AMD, -29), starts_with("AMD.Close")) %>%
-  cor() %>%
-  corrplot(method = "number", type = "lower", diag = FALSE, tl.cex=0.6, number.cex=0.35, title="INTC Correlation Plot")
+  fill(AMD.Close_L14, .direction = "up") 
 ```
  
+## Added Predictors and Metrics
+
+While the six predictors provided by Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our stocks. The main kind of variables we wish to introduce are ones which simply keep track of data from previous days; since each predictor in our original data frame only applies to a 24-hour window, there could be some potentially important information in the long-term trends of a stock which ultimately affect a share's price.
+
+
+### Simple Moving Average of Closing Price
+
+As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors. 
+
+While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the simple moving average and the simple moving standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the moving value is (i.e. the number of days averaged over) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
+
+Additionally, there is no clear choice for how much previous data to account for — should the analysis look back at a single week's worth of data or a month? As this is itself an interesting question for the sake of tuning our models, **we will consider this an added hyperparameter for the problem** and consider four possible values: 1 week, 2 weeks, 1 month, and 2 months.
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+
+simple_moving_average <- function(my_vec, lag_period) {
+  #' Takes the running average of a column vector
+  #'
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the average values of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+ 
+  # return variable
+  output_vec = c()
+  for (i in 1:length(my_vec)) {
+    # If there are less that lag_period of data previous to the current date,
+    # simply take the average of all the days prior to get the closest thing
+    # to a running average
+    if (i <= lag_period){
+      output_vec[i] = mean(my_vec[1:i])
+    }
+    else {
+      output_vec[i] = mean(my_vec[(i-lag_period + 1):i])
+    }
+  }
+  return(output_vec)
+}
+  
+AMD$AMD.SMA_cl_1W <- simple_moving_average(AMD$AMD.Close, 5)
+AMD$AMD.SMA_cl_2W <- simple_moving_average(AMD$AMD.Close, 10)
+AMD$AMD.SMA_cl_1M <- simple_moving_average(AMD$AMD.Close, 20)
+AMD$AMD.SMA_cl_2M <- simple_moving_average(AMD$AMD.Close, 40)
+
+
+ggplot(data = AMD, aes(x=AMD.Date)) +
+  geom_line(aes(y = AMD.SMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = AMD.SMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = AMD.SMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = AMD.SMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("Simple Moving Average") +
+  scale_y_continuous(limits = c(0, 220), labels = label_comma()) +
+  theme_dark()
+```
+
+One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
+
+
+
+ 
+### Exponential Moving Average
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+exponential_moving_average_helper <- function(my_vec, lag_period, smoothing_factor) {
+  #' Helper function to evaluate the exponential moving average over a fixed period 
+  #' using an array buffer
+  #'
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the average values of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+ 
+  vec_len <- length(my_vec)
+  output_vec <- c()
+  output_vec[1] <- my_vec[1]
+  
+  for (i in 2:vec_len) {
+    output_vec[i] <- smoothing_factor * my_vec[i] + (1 - smoothing_factor) * output_vec[i-1]
+  }
+  
+  return(output_vec[vec_len])
+}
+
+exponential_moving_average <- function(my_vec, lag_period) {
+  #' Takes the running average of a column vector
+  #'
+  #' Creates a new column vector whose entries are the average of the previous lag_period entries.
+  #' When not enough data is available to take the average over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the average values of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the average of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+ 
+  output_vec <- c()
+  output_vec[1] <- my_vec[1]
+  smoothing_factor = 2/(lag_period+1)
+  for (i in 2:length(my_vec)) {
+    # If there are less that lag_period of data previous to the current date,
+    # simply take the average of all the days prior to get the closest thing
+    # to a running average
+    if (i <= lag_period){
+      output_vec[i] = exponential_moving_average_helper(my_vec[1:i], i, 2/(i + 1))
+    }
+    else {
+      output_vec[i] = exponential_moving_average_helper(my_vec[(i-lag_period + 1):i], lag_period, smoothing_factor)
+    }
+  }
+  
+  return(output_vec)
+}
+
+
+AMD$AMD.EMA_cl_1W <- exponential_moving_average(AMD$AMD.Close, 5)
+AMD$AMD.EMA_cl_2W <- exponential_moving_average(AMD$AMD.Close, 10)
+AMD$AMD.EMA_cl_1M <- exponential_moving_average(AMD$AMD.Close, 20)
+AMD$AMD.EMA_cl_2M <- exponential_moving_average(AMD$AMD.Close, 40)
+
+ggplot(data = AMD, aes(x=AMD.Date)) +
+  geom_line(aes(y = AMD.EMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = AMD.EMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = AMD.EMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = AMD.EMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("Exponential Moving Average") +
+  scale_y_continuous(limits = c(0, 220), labels = label_comma()) +
+  theme_dark()
+```
+
+
+
+
+
+### Simple Moving Deviation of Closing Price
+
+With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+simple_moving_deviation <- function(my_vec, lag_period) {
+  #' Takes the running standard deviation of a column vector
+  #'
+  #' Creates a new column vector whose entries are the standard deviation of the previous lag_period entries.
+  #' When not enough data is available to take the deviation over lag_period, the closest possible 
+  #' average will be taken (for example, if lag_period = 10, then the first 2nd entry of the output
+  #' vector will simply be the average of the first two values, the 3rd entry of the output vector
+  #' will be the average of the first three values, and so forth.)
+  #'
+  #' @param my_vec the column vector to take the standard deviation of
+  #' @param lag_period the number of days one wishes to average over
+  #' 
+  #' @return A vector whose entries represent the standard deviation of the previous lag_period entries in my_vec
+  
+  
+  # Error handling
+  if(is.vector(my_vec) == FALSE){
+    stop("Not Vector: First argument of simple_moving_average must be a vector")
+  }
+  if(is.numeric(my_vec[1]) == FALSE){
+    stop("Non-numeric Entries: values of vector in first argument must be numeric.")
+  }
+  if(is.numeric(lag_period) == FALSE || lag_period != round(lag_period)){
+    stop("Not Integer: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+  if(lag_period <= 1){
+    stop("Not Large Enough: Second argument of simple_moving_average must be an integer larger than or equal to 2")
+  }
+
+  # return variable
+  output_vec = c()
+  
+  # Setting the first standard deviation to 0 and beginning the loop
+  # at 2 prevents a divide by 0 error without adding an additional if-else branch
+  # in the loop
+  output_vec[1] = 0
+  for (i in 2:length(my_vec)) {
+    
+    # If there are less that lag_period of data previous to the current date,
+    # simply take the average of all the days prior to get the closest thing
+    # to a running average
+    if (i <= lag_period){
+       output_vec[i] = sd(my_vec[1:i])
+    }
+    else {
+      output_vec[i] = sd(my_vec[(i-lag_period+1):i])
+    }
+  }
+  return(output_vec)
+}
+
+
+AMD$AMD.SMD_cl_1W <- simple_moving_deviation(AMD$AMD.Close, 5)
+AMD$AMD.SMD_cl_2W <- simple_moving_deviation(AMD$AMD.Close, 10)
+AMD$AMD.SMD_cl_1M <- simple_moving_deviation(AMD$AMD.Close, 20)
+AMD$AMD.SMD_cl_2M <- simple_moving_deviation(AMD$AMD.Close, 40)
+
+ggplot(data = AMD, aes(x=AMD.Date)) +
+  geom_line(aes(y = AMD.SMD_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = AMD.SMD_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = AMD.SMD_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = AMD.SMD_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("Simple Moving Deviation") +
+  scale_y_continuous(limits = c(0, 25), labels = label_comma()) +
+  theme_dark()
+```
+
+
+
+### Moving Average Convergence Divergence (MACD)
+
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+AMD$AMD.MACD = (AMD$AMD.EMA_cl_2W - AMD$AMD.EMA_cl_1M)
+
+ggplot(data = AMD, aes(x=AMD.Date)) +
+  geom_line(aes(y = AMD.MACD, color = 'MACD')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'MACD' = 'aquamarine'
+  )) +
+  xlab('Date') +
+  ggtitle("MACD Line") +
+  scale_y_continuous(limits = c(-10, 10), labels = label_comma()) +
+  theme_dark()
+```
 
 
 ## Data Correlation
@@ -182,10 +455,10 @@ While having a large array of predictors is in some sense useful for seeing the 
 
 Ultimately, in order to achieve a good understanding of the correlations between all of our predictors we will need to cross examine several subsets of our predictors to see which predictors are correlated for a single stock, and which predictors are useful for measuring competition between stocks. Dividing our correlation plots into two types, we first examine how the predictors are correlated for a **fixed** stock, and test this underlying trend accross a subset of our stocks (ASML, INTC, NVDA, and NXPI ):
 
-```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="50%"}
+```{r include = TRUE, warning = FALSE, message = FALSE }
 select(AMD, is.numeric) %>%
   cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="INTC Correlation Plot")
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="Correlation Plot")
 ```
  
 
@@ -203,68 +476,25 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# SSD_split_1W <- initial_split(SSD, prop = 0.7,
-#                                 strata = NVDA_avg_cl_1W)
-# SSD_train_1W <- training(SSD_split_1W)
-# SSD_test_1W <- testing(SSD_split_1W)
-# 
-# 
-# SSD_split_2W <- initial_split(SSD, prop = 0.7,
-#                                 strata = NVDA_avg_cl_2W)
-# SSD_train_2W <- training(SSD_split_2W)
-# SSD_test_2W <- testing(SSD_split_2W)
-# 
-# 
-# 
-# SSD_split_1M <- initial_split(SSD, prop = 0.7,
-#                                 strata = NVDA_avg_cl_1M)
-# SSD_train_1M <- training(SSD_split_1M)
-# SSD_test_1M <- testing(SSD_split_1M)
-# 
-# 
-# 
-# SSD_split_2M <- initial_split(SSD, prop = 0.7,
-#                                 strata = NVDA_avg_cl_2M)
-# SSD_train_2M <- training(SSD_split_2M)
-# SSD_test_2M <- testing(SSD_split_2M)
+AMD_split <- initial_split(AMD, prop = 0.7,
+                                strata = AMD.Close)
+AMD_train <- training(AMD_split)
+AMD_test <- testing(AMD_split)
+
 ```
 
 
 ## One-Week Model Fitting
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
- # SSD_recipe_1W = recipe(
- #   NVDA_avg_cl_1W ~ NVDA_std_dev_cl_1W + NVDA_avg_ret_1W + NVDA_std_dev_ret_1W + NVDA_avg_vol_1W + NVDA_std_dev_vol_1W +
- #     TSM_avg_cl_1W + TSM_std_dev_cl_1W + TSM_avg_ret_1W + TSM_std_dev_ret_1W + TSM_avg_vol_1W + TSM_std_dev_vol_1W +
- #     NXPI_avg_cl_1W + NXPI_std_dev_cl_1W + NXPI_avg_ret_1W + NXPI_std_dev_ret_1W + NXPI_avg_vol_1W + NXPI_std_dev_vol_1W + QCOM_avg_cl_1W + QCOM_std_dev_cl_1W + QCOM_avg_ret_1W + QCOM_std_dev_ret_1W + QCOM_avg_vol_1W + QCOM_std_dev_vol_1W + MPWR_avg_cl_1W + MPWR_std_dev_cl_1W + MPWR_avg_ret_1W + MPWR_std_dev_ret_1W + MPWR_avg_vol_1W + MPWR_std_dev_vol_1W + ON_avg_cl_1W + ON_std_dev_cl_1W + ON_avg_ret_1W + ON_std_dev_ret_1W + ON_avg_vol_1W + ON_std_dev_vol_1W + AMD_avg_cl_1W + AMD_std_dev_cl_1W + AMD_avg_ret_1W + AMD_std_dev_ret_1W + AMD_avg_vol_1W + AMD_std_dev_vol_1W + INTC_avg_cl_1W + INTC_std_dev_cl_1W + INTC_avg_ret_1W + INTC_std_dev_ret_1W + INTC_avg_vol_1W + INTC_std_dev_vol_1W + AVGO_avg_cl_1W + AVGO_std_dev_cl_1W + AVGO_avg_ret_1W + AVGO_std_dev_ret_1W + AVGO_avg_vol_1W + AVGO_std_dev_vol_1W + ASML_avg_cl_1W + ASML_std_dev_cl_1W + ASML_avg_ret_1W + ASML_std_dev_ret_1W + ASML_avg_vol_1W + ASML_std_dev_vol_1W + AMAT_avg_cl_1W + AMAT_std_dev_cl_1W + AMAT_avg_ret_1W + AMAT_std_dev_ret_1W + AMAT_avg_vol_1W + AMAT_std_dev_vol_1W + TXN_avg_cl_1W + TXN_std_dev_cl_1W + TXN_avg_ret_1W + TXN_std_dev_ret_1W + TXN_avg_vol_1W + TXN_std_dev_vol_1W,
- #                     data=SSD_train_1W) %>%
- #  step_center(all_predictors()) %>% 
- #  step_scale(all_predictors())
- # 
- # SSD_recipe_2W = recipe(
- #   NVDA_avg_cl_2W ~ NVDA_std_dev_cl_2W + NVDA_avg_ret_2W + NVDA_std_dev_ret_2W + NVDA_avg_vol_2W + NVDA_std_dev_vol_2W +
- #     TSM_avg_cl_2W + TSM_std_dev_cl_2W + TSM_avg_ret_2W + TSM_std_dev_ret_2W + TSM_avg_vol_2W + TSM_std_dev_vol_2W +
- #     NXPI_avg_cl_2W + NXPI_std_dev_cl_2W + NXPI_avg_ret_2W + NXPI_std_dev_ret_2W + NXPI_avg_vol_2W + NXPI_std_dev_vol_2W + QCOM_avg_cl_2W + QCOM_std_dev_cl_2W + QCOM_avg_ret_2W + QCOM_std_dev_ret_2W + QCOM_avg_vol_2W + QCOM_std_dev_vol_2W + MPWR_avg_cl_2W + MPWR_std_dev_cl_2W + MPWR_avg_ret_2W + MPWR_std_dev_ret_2W + MPWR_avg_vol_2W + MPWR_std_dev_vol_2W + ON_avg_cl_2W + ON_std_dev_cl_2W + ON_avg_ret_2W + ON_std_dev_ret_2W + ON_avg_vol_2W + ON_std_dev_vol_2W + AMD_avg_cl_2W + AMD_std_dev_cl_2W + AMD_avg_ret_2W + AMD_std_dev_ret_2W + AMD_avg_vol_2W + AMD_std_dev_vol_2W + INTC_avg_cl_2W + INTC_std_dev_cl_2W + INTC_avg_ret_2W + INTC_std_dev_ret_2W + INTC_avg_vol_2W + INTC_std_dev_vol_2W + AVGO_avg_cl_2W + AVGO_std_dev_cl_2W + AVGO_avg_ret_2W + AVGO_std_dev_ret_2W + AVGO_avg_vol_2W + AVGO_std_dev_vol_2W + ASML_avg_cl_2W + ASML_std_dev_cl_2W + ASML_avg_ret_2W + ASML_std_dev_ret_2W + ASML_avg_vol_2W + ASML_std_dev_vol_2W + AMAT_avg_cl_2W + AMAT_std_dev_cl_2W + AMAT_avg_ret_2W + AMAT_std_dev_ret_2W + AMAT_avg_vol_2W + AMAT_std_dev_vol_2W + TXN_avg_cl_2W + TXN_std_dev_cl_2W + TXN_avg_ret_2W + TXN_std_dev_ret_2W + TXN_avg_vol_2W + TXN_std_dev_vol_2W,
- #                     data=SSD_train_2W) %>%
- #  step_center(all_predictors()) %>% 
- #  step_scale(all_predictors())
- # 
- #  SSD_recipe_1M = recipe(
- #   NVDA_avg_cl_1M ~ NVDA_std_dev_cl_1M + NVDA_avg_ret_1M + NVDA_std_dev_ret_1M + NVDA_avg_vol_1M + NVDA_std_dev_vol_1M +
- #     TSM_avg_cl_1M + TSM_std_dev_cl_1M + TSM_avg_ret_1M + TSM_std_dev_ret_1M + TSM_avg_vol_1M + TSM_std_dev_vol_1M +
- #     NXPI_avg_cl_1M + NXPI_std_dev_cl_1M + NXPI_avg_ret_1M + NXPI_std_dev_ret_1M + NXPI_avg_vol_1M + NXPI_std_dev_vol_1M + QCOM_avg_cl_1M + QCOM_std_dev_cl_1M + QCOM_avg_ret_1M + QCOM_std_dev_ret_1M + QCOM_avg_vol_1M + QCOM_std_dev_vol_1M + MPWR_avg_cl_1M + MPWR_std_dev_cl_1M + MPWR_avg_ret_1M + MPWR_std_dev_ret_1M + MPWR_avg_vol_1M + MPWR_std_dev_vol_1M + ON_avg_cl_1M + ON_std_dev_cl_1M + ON_avg_ret_1M + ON_std_dev_ret_1M + ON_avg_vol_1M + ON_std_dev_vol_1M + AMD_avg_cl_1M + AMD_std_dev_cl_1M + AMD_avg_ret_1M + AMD_std_dev_ret_1M + AMD_avg_vol_1M + AMD_std_dev_vol_1M + INTC_avg_cl_1M + INTC_std_dev_cl_1M + INTC_avg_ret_1M + INTC_std_dev_ret_1M + INTC_avg_vol_1M + INTC_std_dev_vol_1M + AVGO_avg_cl_1M + AVGO_std_dev_cl_1M + AVGO_avg_ret_1M + AVGO_std_dev_ret_1M + AVGO_avg_vol_1M + AVGO_std_dev_vol_1M + ASML_avg_cl_1M + ASML_std_dev_cl_1M + ASML_avg_ret_1M + ASML_std_dev_ret_1M + ASML_avg_vol_1M + ASML_std_dev_vol_1M + AMAT_avg_cl_1M + AMAT_std_dev_cl_1M + AMAT_avg_ret_1M + AMAT_std_dev_ret_1M + AMAT_avg_vol_1M + AMAT_std_dev_vol_1M + TXN_avg_cl_1M + TXN_std_dev_cl_1M + TXN_avg_ret_1M + TXN_std_dev_ret_1M + TXN_avg_vol_1M + TXN_std_dev_vol_1M,
- #                     data=SSD_train_1M) %>%
- #  step_center(all_predictors()) %>% 
- #  step_scale(all_predictors())
- #  
- #   SSD_recipe_2M = recipe(
- #   NVDA_avg_cl_2M ~ NVDA_std_dev_cl_2M + NVDA_avg_ret_2M + NVDA_std_dev_ret_2M + NVDA_avg_vol_2M + NVDA_std_dev_vol_2M +
- #     TSM_avg_cl_2M + TSM_std_dev_cl_2M + TSM_avg_ret_2M + TSM_std_dev_ret_2M + TSM_avg_vol_2M + TSM_std_dev_vol_2M +
- #     NXPI_avg_cl_2M + NXPI_std_dev_cl_2M + NXPI_avg_ret_2M + NXPI_std_dev_ret_2M + NXPI_avg_vol_2M + NXPI_std_dev_vol_2M + QCOM_avg_cl_2M + QCOM_std_dev_cl_2M + QCOM_avg_ret_2M + QCOM_std_dev_ret_2M + QCOM_avg_vol_2M + QCOM_std_dev_vol_2M + MPWR_avg_cl_2M + MPWR_std_dev_cl_2M + MPWR_avg_ret_2M + MPWR_std_dev_ret_2M + MPWR_avg_vol_2M + MPWR_std_dev_vol_2M + ON_avg_cl_2M + ON_std_dev_cl_2M + ON_avg_ret_2M + ON_std_dev_ret_2M + ON_avg_vol_2M + ON_std_dev_vol_2M + AMD_avg_cl_2M + AMD_std_dev_cl_2M + AMD_avg_ret_2M + AMD_std_dev_ret_2M + AMD_avg_vol_2M + AMD_std_dev_vol_2M + INTC_avg_cl_2M + INTC_std_dev_cl_2M + INTC_avg_ret_2M + INTC_std_dev_ret_2M + INTC_avg_vol_2M + INTC_std_dev_vol_2M + AVGO_avg_cl_2M + AVGO_std_dev_cl_2M + AVGO_avg_ret_2M + AVGO_std_dev_ret_2M + AVGO_avg_vol_2M + AVGO_std_dev_vol_2M + ASML_avg_cl_2M + ASML_std_dev_cl_2M + ASML_avg_ret_2M + ASML_std_dev_ret_2M + ASML_avg_vol_2M + ASML_std_dev_vol_2M + AMAT_avg_cl_2M + AMAT_std_dev_cl_2M + AMAT_avg_ret_2M + AMAT_std_dev_ret_2M + AMAT_avg_vol_2M + AMAT_std_dev_vol_2M + TXN_avg_cl_2M + TXN_std_dev_cl_2M + TXN_avg_ret_2M + TXN_std_dev_ret_2M + TXN_avg_vol_2M + TXN_std_dev_vol_2M,
- #                     data=SSD_train_2M) %>%
- #  step_center(all_predictors()) %>% 
- #  step_scale(all_predictors())
 
+AMD_recipe = recipe(AMD.Close ~ AMD.Close_L1 + AMD.Close_L2 + AMD.Close_L3 + AMD.Close_L4 +
+                      AMD.Close_L5 + AMD.Close_L6 + AMD.Close_L7 + AMD.Close_L8 + AMD.Close_L9 +
+                      AMD.Close_L10 + AMD.Close_L11 + AMD.Close_L12 + AMD.Close_L13 + AMD.Close_L14 +
+                      AMD.SMD_cl_1W + AMD.SMA_cl_1W + AMD.MACD,
+                    data=AMD_train) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
 ```
 
 
@@ -272,10 +502,7 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 ## k-Fold Cross Validation
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# SSD_folds_1W <- vfold_cv(SSD_train_1W, v = 10, strata = NVDA_avg_cl_1W)
-# SSD_folds_2W <- vfold_cv(SSD_train_2W, v = 10, strata = NVDA_avg_cl_2W)
-# SSD_folds_1M <- vfold_cv(SSD_train_1M, v = 10, strata = NVDA_avg_cl_1M)
-# SSD_folds_2M <- vfold_cv(SSD_train_2M, v = 10, strata = NVDA_avg_cl_2M)
+AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = AMD.Close)
 ```
 
 
@@ -283,109 +510,64 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 ## Fitting the Models
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Linear Regression
-# lm_model <- linear_reg() %>% 
-#   set_engine("lm")
-# 
-# 
-# # Ridge Regression
-# ridge_model <- linear_reg(mixture = 0, 
-#                          penalty = tune()) %>% 
-#   set_mode("regression") %>% 
-#   set_engine("glmnet")
-# 
-# # Lasso Regression
-# lasso_model <- linear_reg(mixture = 1, 
-#                          penalty = tune()) %>% 
-#   set_mode("regression") %>% 
-#   set_engine("glmnet")
-# 
-# 
-# # Elastic Net
-# elastic_net_model <- linear_reg(mixture = tune(), 
-#                               penalty = tune()) %>% 
-#   set_mode("regression") %>%
-#   set_engine("glmnet")
-# 
-# # k-Nearest Neighbors (k = 7)
-# knn_model <- nearest_neighbor(neighbors = tune()) %>% 
-#   set_engine("kknn") %>% 
-#   set_mode("regression")
+# Linear Regression
+lm_model <- linear_reg() %>%
+  set_engine("lm")
+
+
+# Ridge Regression
+ridge_model <- linear_reg(mixture = 0,
+                         penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+# Lasso Regression
+lasso_model <- linear_reg(mixture = 1,
+                         penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+
+# Elastic Net
+elastic_net_model <- linear_reg(mixture = tune(),
+                              penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+# k-Nearest Neighbors
+knn_model <- nearest_neighbor(neighbors = tune()) %>%
+  set_engine("kknn") %>%
+  set_mode("regression")
 ```
 
 
 ### Set Up Workflows 
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Linear Regression Workflows 
-# lm_wflow_1W <- workflow() %>% 
-#   add_model(lm_model) %>% 
-#   add_recipe(SSD_recipe_1W)
-# lm_wflow_2W <- workflow() %>% 
-#   add_model(lm_model) %>% 
-#   add_recipe(SSD_recipe_2W)
-# lm_wflow_1M <- workflow() %>% 
-#   add_model(lm_model) %>% 
-#   add_recipe(SSD_recipe_1M)
-# lm_wflow_2M <- workflow() %>% 
-#   add_model(lm_model) %>% 
-#   add_recipe(SSD_recipe_2M)
-# 
-# # Ridge Regression Workflows
-# ridge_wflow_1W <- workflow() %>% 
-#   add_model(ridge_model) %>% 
-#   add_recipe(SSD_recipe_1W)
-# ridge_wflow_2W <- workflow() %>% 
-#   add_model(ridge_model) %>% 
-#   add_recipe(SSD_recipe_2W)
-# ridge_wflow_1M <- workflow() %>% 
-#   add_model(ridge_model) %>% 
-#   add_recipe(SSD_recipe_1M)
-# ridge_wflow_2M <- workflow() %>% 
-#   add_model(ridge_model) %>% 
-#   add_recipe(SSD_recipe_2M)
-# 
-# # Lasso Regression Workflows
-# lasso_wflow_1W <- workflow() %>% 
-#   add_model(lasso_model) %>% 
-#   add_recipe(SSD_recipe_1W)
-# lasso_wflow_2W <- workflow() %>% 
-#   add_model(lasso_model) %>% 
-#   add_recipe(SSD_recipe_2W)
-# lasso_wflow_1M <- workflow() %>% 
-#   add_model(lasso_model) %>% 
-#   add_recipe(SSD_recipe_1M)
-# lasso_wflow_2M <- workflow() %>% 
-#   add_model(lasso_model) %>% 
-#   add_recipe(SSD_recipe_2M)
-# 
-# # Elastic Net Workflows
-# elastic_net_wflow_1W <- workflow() %>% 
-#   add_model(elastic_net_model) %>% 
-#   add_recipe(SSD_recipe_1W)
-# elastic_net_wflow_2W <- workflow() %>% 
-#   add_model(elastic_net_model) %>% 
-#   add_recipe(SSD_recipe_2W)
-# elastic_net_wflow_1M <- workflow() %>% 
-#   add_model(elastic_net_model) %>% 
-#   add_recipe(SSD_recipe_1M)
-# elastic_net_wflow_2M <- workflow() %>% 
-#   add_model(elastic_net_model) %>% 
-#   add_recipe(SSD_recipe_2M)
-# 
-# # k-Nearest Neighbors Workflows
-# knn_wflow_1W <- workflow() %>% 
-#   add_model(knn_model) %>% 
-#   add_recipe(SSD_recipe_1W)
-# knn_wflow_2W <- workflow() %>% 
-#   add_model(knn_model) %>% 
-#   add_recipe(SSD_recipe_2W)
-# knn_wflow_1M <- workflow() %>% 
-#   add_model(knn_model) %>% 
-#   add_recipe(SSD_recipe_1M)
-# knn_wflow_2M <- workflow() %>% 
-#   add_model(knn_model) %>% 
-#   add_recipe(SSD_recipe_2M)
+# Linear Regression Workflows
+lm_wflow <- workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(AMD_recipe)
+ 
+# Ridge Regression Workflows
+ridge_wflow <- workflow() %>%
+  add_model(ridge_model) %>%
+  add_recipe(AMD_recipe)
+ 
+# Lasso Regression Workflows
+lasso_wflow <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(AMD_recipe)
+ 
+# Elastic Net Workflows
+elastic_net_wflow <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(AMD_recipe)
+  
+# k-Nearest Neighbors Workflows
+knn_wflow <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(AMD_recipe)
 ```
 
 
@@ -395,291 +577,103 @@ One of the primary ways we ensure robustness of our models is by partitioning ou
 
 Set up Grids:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Grid for Ridge Regression and Lasso Regression
-# no_mixture_grid <- grid_regular(penalty(range = c(0,1)), levels = 50)
-# 
-# # Grid for Elastic Net
-# elastic_net_grid <- grid_regular(penalty(range = c(0, 1),
-#                                      trans = identity_trans()),
-#                         mixture(range = c(0, 1)),
-#                              levels = 10)
-# 
-# # k-Nearest Neighbors Net 
-# knn_grid <- grid_regular(neighbors(range = c(2,20)), levels = 10)
+# Grid for Ridge Regression and Lasso Regression
+no_mixture_grid <- grid_regular(penalty(range = c(0,1)), levels = 50)
+
+# Grid for Elastic Net
+elastic_net_grid <- grid_regular(penalty(range = c(0, 1),
+                                     trans = identity_trans()),
+                        mixture(range = c(0, 1)),
+                             levels = 10)
+
+# k-Nearest Neighbors Net
+knn_grid <- grid_regular(neighbors(range = c(2,20)), levels = 10)
 ```
 
 
 
 
-Tune Parameters for 1-Week Recipe
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# 
-# # Find optimal parameters for ridge regression
-# ridge_tune_1W <- tune_grid(
-#   ridge_wflow_1W,
-#   resamples = SSD_folds_1W,
-#   grid = no_mixture_grid
-# )
-# ridge_final_wflow_1W <- select_best(ridge_tune_1W, metric="rmse" ) %>%
-#   finalize_workflow(x=ridge_wflow_1W)
-# 
-# # Find optimal parameters for lasso regression
-# lasso_tune_1W <- tune_grid(
-#   lasso_wflow_1W,
-#   resamples = SSD_folds_1W,
-#   grid = no_mixture_grid
-# )
-# lasso_final_wflow_1W <- select_best(lasso_tune_1W, metric="rmse") %>%
-#   finalize_workflow(x=lasso_wflow_1W)
-# 
-# # Find optimal parameters for Elastic Net
-# elastic_net_tune_1W <- tune_grid(
-#   elastic_net_wflow_1W,
-#   resamples = SSD_folds_1W,
-#   grid = elastic_net_grid
-# )
-# elastic_net_final_wflow_1W <- select_best(elastic_net_tune_1W, metric = "rmse") %>% 
-#   finalize_workflow(x=elastic_net_wflow_1W)
-# 
-# # Find optimal parameters for k-Nearest Neighbors
-# knn_tune_1W <- tune_grid(
-#     knn_wflow_1W,
-#     resamples = SSD_folds_1W,
-#     grid = knn_grid
-# )
-# knn_final_wflow_1W <- select_best(knn_tune_1W, metric = "rmse") %>%
-#   finalize_workflow(x=knn_wflow_1W)
-```
 
+# Find optimal parameters for ridge regression
+ridge_tune <- tune_grid(
+  ridge_wflow,
+  resamples = AMD_folds,
+  grid = no_mixture_grid
+)
+ridge_final_wflow  <- select_best(ridge_tune , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow )
 
+# Find optimal parameters for lasso regression
+lasso_tune  <- tune_grid(
+  lasso_wflow ,
+  resamples = AMD_folds,
+  grid = no_mixture_grid
+)
+lasso_final_wflow  <- select_best(lasso_tune , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow )
 
-Tune Parameters for 2-Week Recipe
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# 
-# # Find optimal parameters for ridge regression
-# ridge_tune_2W <- tune_grid(
-#   ridge_wflow_2W,
-#   resamples = SSD_folds_2W,
-#   grid = no_mixture_grid
-# )
-# ridge_final_wflow_2W <- select_best(ridge_tune_2W, metric="rmse" ) %>%
-#   finalize_workflow(x=ridge_wflow_2W)
-# 
-# # Find optimal parameters for lasso regression
-# lasso_tune_2W <- tune_grid(
-#   lasso_wflow_2W,
-#   resamples = SSD_folds_2W,
-#   grid = no_mixture_grid
-# )
-# lasso_final_wflow_2W <- select_best(lasso_tune_2W, metric="rmse") %>%
-#   finalize_workflow(x=lasso_wflow_2W)
-# 
-# # Find optimal parameters for Elastic Net
-# elastic_net_tune_2W <- tune_grid(
-#   elastic_net_wflow_2W,
-#   resamples = SSD_folds_2W,
-#   grid = elastic_net_grid
-# )
-# elastic_net_final_wflow_2W <- select_best(elastic_net_tune_2W,  metric = "rmse") %>% 
-#   finalize_workflow(x=elastic_net_wflow_2W)
-# 
-# # Find optimal parameters for k-Nearest Neighbors
-# knn_tune_2W <- tune_grid(
-#     knn_wflow_2W,
-#     resamples = SSD_folds_2W,
-#     grid = knn_grid
-# )
-# knn_final_wflow_2W <- select_best(knn_tune_2W, metric = "rmse") %>% 
-#   finalize_workflow(x=knn_wflow_2W)
-```
+# Find optimal parameters for Elastic Net
+elastic_net_tune  <- tune_grid(
+  elastic_net_wflow ,
+  resamples = AMD_folds,
+  grid = elastic_net_grid
+)
+elastic_net_final_wflow  <- select_best(elastic_net_tune , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow )
 
-
-Tune Parameters for 1-Month Recipe
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Find optimal parameters for ridge regression
-# ridge_tune_1M <- tune_grid(
-#   ridge_wflow_1M,
-#   resamples = SSD_folds_1M,
-#   grid = no_mixture_grid
-# )
-# ridge_final_wflow_1M <- select_best(ridge_tune_1M, metric="rmse" ) %>% 
-#   finalize_workflow(x=ridge_wflow_1M)
-#  
-# # Find optimal parameters for lasso regression
-# lasso_tune_1M <- tune_grid(
-#   lasso_wflow_1M,
-#   resamples = SSD_folds_1M,
-#   grid = no_mixture_grid
-# )
-# lasso_final_wflow_1M <- select_best(lasso_tune_1M, metric="rmse") %>%
-#   finalize_workflow(x=lasso_wflow_1M)
-# 
-# # Find optimal parameters for Elastic Net
-# elastic_net_tune_1M <- tune_grid(
-#   elastic_net_wflow_1M,
-#   resamples = SSD_folds_1M,
-#   grid = elastic_net_grid
-# )
-# elastic_net_final_wflow_1M <- select_best(elastic_net_tune_1M, metric = "rmse") %>% 
-#   finalize_workflow(x=elastic_net_wflow_1M)
-# 
-# # Find optimal parameters for k-Nearest Neighbors
-# knn_tune_1M <- tune_grid(
-#     knn_wflow_1M,
-#     resamples = SSD_folds_1M,
-#     grid = knn_grid
-# )
-# knn_final_wflow_1M <- select_best(knn_tune_1M, metric = "rmse") %>%
-#   finalize_workflow(x=knn_wflow_1M)
-```
-
-
-Tune Parameters for 2-Month Recipe
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Find optimal parameters for ridge regression
-# ridge_tune_2M <- tune_grid(
-#   ridge_wflow_2M,
-#   resamples = SSD_folds_2M,
-#   grid = no_mixture_grid
-# )
-# ridge_final_wflow_2M <-  select_best(ridge_tune_2M, metric="rmse" ) %>%
-#   finalize_workflow(x=ridge_wflow_2M)
-# 
-# # Find optimal parameters for lasso regression
-# lasso_tune_2M <- tune_grid(
-#   lasso_wflow_2M,
-#   resamples = SSD_folds_2M,
-#   grid = no_mixture_grid
-# )
-# lasso_final_wflow_2M <-select_best(lasso_tune_2M, metric="rmse") %>%
-#   finalize_workflow(x=lasso_wflow_2M)
-# 
-# # Find optimal parameters for Elastic Net
-# elastic_net_tune_2M <- tune_grid(
-#   elastic_net_wflow_2M,
-#   resamples = SSD_folds_2M,
-#   grid = elastic_net_grid
-# )
-# elastic_net_final_wflow_2M <- select_best(elastic_net_tune_2M, metric = "rmse") %>%
-#   finalize_workflow(x=elastic_net_wflow_2M)
-# 
-# 
-# # Find optimal parameters for k-Nearest Neighbors
-# knn_tune_2M <- tune_grid(
-#     knn_wflow_2M,
-#     resamples = SSD_folds_2M,
-#     grid = knn_grid
-# )
-# knn_final_wflow_2M <- select_best(knn_tune_2M, metric = "rmse") %>%
-#   finalize_workflow(x=knn_wflow_2M)
+# Find optimal parameters for k-Nearest Neighbors
+knn_tune  <- tune_grid(
+    knn_wflow ,
+    resamples = AMD_folds,
+    grid = knn_grid
+)
+knn_final_wflow  <- select_best(knn_tune , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow )
 ```
 
 ### Model Fitting
 
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Linear Regression Fits
-# lm_fit_1W <- fit(lm_wflow_1W, SSD_train_1W)
-# lm_fit_2W <- fit(lm_wflow_2W, SSD_train_2W)
-# lm_fit_1M <- fit(lm_wflow_1M, SSD_train_1M)
-# lm_fit_2M <- fit(lm_wflow_2M, SSD_train_2M)
-# 
-# # Ridge Regression Fits
-# ridge_fit_1W <- fit(ridge_final_wflow_1W, SSD_train_1W)
-# ridge_fit_2W <- fit(ridge_final_wflow_2W, SSD_train_2W)
-# ridge_fit_1M <- fit(ridge_final_wflow_1M, SSD_train_1M)
-# ridge_fit_2M <- fit(ridge_final_wflow_2M, SSD_train_2M)
-# 
-# # Lasso Regression Fits
-# lasso_fit_1W <- fit(lasso_final_wflow_1W, SSD_train_1W)
-# lasso_fit_2W <- fit(lasso_final_wflow_2W, SSD_train_2W)
-# lasso_fit_1M <- fit(lasso_final_wflow_1M, SSD_train_1M)
-# lasso_fit_2M <- fit(lasso_final_wflow_2M, SSD_train_2M)
-# 
-# # Elastic Net Fits
-# elastic_net_fit_1W <- fit(elastic_net_final_wflow_1W, SSD_train_1W)
-# elastic_net_fit_2W <- fit(elastic_net_final_wflow_2W, SSD_train_2W)
-# elastic_net_fit_1M <- fit(elastic_net_final_wflow_1M, SSD_train_1M)
-# elastic_net_fit_2M <- fit(elastic_net_final_wflow_2M, SSD_train_2M)
-# 
-# # k-Nearest Neighbors Fit
-# knn_fit_1W <- fit(knn_final_wflow_1W, SSD_train_1W)
-# knn_fit_2W <- fit(knn_final_wflow_2W, SSD_train_2W)
-# knn_fit_1M <- fit(knn_final_wflow_1M, SSD_train_1M)
-# knn_fit_2M <- fit(knn_final_wflow_2M, SSD_train_2M)
+# Linear Regression Fits
+lm_fit  <- fit(lm_wflow, AMD_train)
+ 
+# Ridge Regression Fits
+ridge_fit  <- fit(ridge_final_wflow , AMD_train)
+ 
+# Lasso Regression Fits
+lasso_fit  <- fit(lasso_final_wflow , AMD_train)
+
+# Elastic Net Fits
+elastic_net_fit <- fit(elastic_net_final_wflow , AMD_train)
+ 
+# k-Nearest Neighbors Fit
+knn_fit  <- fit(knn_final_wflow , AMD_train)
 ```
 
 ### Model Results for predicting 1-Week Average of NVIDIA Stock Price
 
-
-
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# # Linear Regression Training 
-# lm_train_res_1W <- predict(lm_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-# lm_train_res_1W <- bind_cols(lm_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
-# 
-# lm_train_res_2W <- predict(lm_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-# lm_train_res_2W <- bind_cols(lm_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
-# 
-# lm_train_res_1M <- predict(lm_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-# lm_train_res_1M <- bind_cols(lm_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
-# 
-# lm_train_res_2M <- predict(lm_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-# lm_train_res_2M <- bind_cols(lm_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
-# 
-# 
-# # Ridge Regression Training
-# ridge_train_res_1W <- predict(ridge_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-# ridge_train_res_1W <- bind_cols(ridge_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
-# 
-# ridge_train_res_2W <- predict(ridge_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-# ridge_train_res_2W <- bind_cols(ridge_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
-# 
-# ridge_train_res_1M <- predict(ridge_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-# ridge_train_res_1M <- bind_cols(ridge_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
-# 
-# ridge_train_res_2M <- predict(ridge_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-# ridge_train_res_2M <- bind_cols(ridge_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
-# 
-# 
-# # Lasso Regression Training
-# lasso_train_res_1W <- predict(lasso_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-# lasso_train_res_1W <- bind_cols(lasso_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
-# 
-# lasso_train_res_2W <- predict(lasso_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-# lasso_train_res_2W <- bind_cols(lasso_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
-# 
-# lasso_train_res_1M <- predict(lasso_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-# lasso_train_res_1M <- bind_cols(lasso_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
-# 
-# lasso_train_res_2M <- predict(lasso_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-# lasso_train_res_2M <- bind_cols(lasso_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
-# 
-# # Elastic Net Training
-# elastic_net_train_res_1W <- predict(elastic_net_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-# elastic_net_train_res_1W <- bind_cols(elastic_net_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
-# 
-# elastic_net_train_res_2W <- predict(elastic_net_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-# elastic_net_train_res_2W <- bind_cols(elastic_net_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
-# 
-# elastic_net_train_res_1M <- predict(elastic_net_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-# elastic_net_train_res_1M <- bind_cols(elastic_net_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
-# 
-# elastic_net_train_res_2M <- predict(elastic_net_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-# elastic_net_train_res_2M <- bind_cols(elastic_net_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
-# 
-# # k-Nearest Neighbors Training
-# knn_train_res_1W <- predict(knn_fit_1W, new_data = SSD_train_1W %>% select(-NVDA_avg_cl_1W))
-# knn_train_res_1W <- bind_cols(knn_train_res_1W, SSD_train_1W %>% select(NVDA_avg_cl_1W))
-# 
-# knn_train_res_2W <- predict(knn_fit_2W, new_data = SSD_train_2W %>% select(-NVDA_avg_cl_2W))
-# knn_train_res_2W <- bind_cols(knn_train_res_2W, SSD_train_2W %>% select(NVDA_avg_cl_2W))
-# 
-# knn_train_res_1M <- predict(knn_fit_1M, new_data = SSD_train_1M %>% select(-NVDA_avg_cl_1M))
-# knn_train_res_1M <- bind_cols(knn_train_res_1M, SSD_train_1M %>% select(NVDA_avg_cl_1M))
-# 
-# knn_train_res_2M <- predict(knn_fit_2M, new_data = SSD_train_2M %>% select(-NVDA_avg_cl_2M))
-# knn_train_res_2M <- bind_cols(knn_train_res_2M, SSD_train_2M %>% select(NVDA_avg_cl_2M))
+# Linear Regression Training
+lm_train_res  <- predict(lm_fit , new_data = AMD_train %>% select(-AMD.Close))
+lm_train_res  <- bind_cols(lm_train_res , AMD_train %>% select(AMD.Close))
+ 
+# Ridge Regression Training
+ridge_train_res  <- predict(ridge_fit , new_data = AMD_train %>% select(-AMD.Close))
+ridge_train_res  <- bind_cols(ridge_train_res , AMD_train %>% select(AMD.Close))
+ 
+# Lasso Regression Training
+lasso_train_res  <- predict(lasso_fit , new_data =  AMD_train  %>% select(-AMD.Close))
+lasso_train_res  <- bind_cols(lasso_train_res ,  AMD_train  %>% select(AMD.Close))
+
+# Elastic Net Training
+elastic_net_train_res  <- predict(elastic_net_fit , new_data =  AMD_train  %>% select(-AMD.Close ))
+elastic_net_train_res  <- bind_cols(elastic_net_train_res ,  AMD_train  %>% select(AMD.Close ))
+
+# k-Nearest Neighbors Training
+knn_train_res  <- predict(knn_fit , new_data =  AMD_train  %>% select(-AMD.Close ))
+knn_train_res  <- bind_cols(knn_train_res ,  AMD_train  %>% select(AMD.Close ))
 ```
 
 
@@ -688,60 +682,30 @@ Tune Parameters for 2-Month Recipe
 
 Root Mean Square Error (RMSE) results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-#        One_Week = c((lm_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (ridge_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (lasso_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (elastic_net_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (knn_train_res_1W %>% rmse( NVDA_avg_cl_1W, .pred))$.estimate ),
-#        Two_Week = c((lm_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (ridge_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (lasso_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (elastic_net_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (knn_train_res_2W %>% rmse( NVDA_avg_cl_2W, .pred))$.estimate),
-#        One_Month = c((lm_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (ridge_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (lasso_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (elastic_net_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (knn_train_res_1M %>% rmse( NVDA_avg_cl_1M, .pred))$.estimate),
-#        Two_Month = c((lm_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (ridge_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (lasso_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (elastic_net_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (knn_train_res_2M %>% rmse( NVDA_avg_cl_2M, .pred))$.estimate)
-#        ) %>% 
-#   kable() %>% 
-#   kable_styling(full_width = F) %>% 
-#   scroll_box(width = "100%", height = "200px")
+tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
+       One_Week = c((lm_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (ridge_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (lasso_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (elastic_net_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (knn_train_res  %>% rmse( AMD.Close, .pred))$.estimate ) 
+       ) %>%
+  kable() %>%
+  kable_styling(full_width = F) %>%
+  scroll_box(width = "100%", height = "200px")
 ```
 
 
 R^2 results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 
-# tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-#        One_Week = c((lm_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (ridge_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (lasso_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (elastic_net_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate,
-#                     (knn_train_res_1W %>% rsq( NVDA_avg_cl_1W, .pred))$.estimate ),
-#        Two_Week = c((lm_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (ridge_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (lasso_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (elastic_net_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate,
-#                     (knn_train_res_2W %>% rsq( NVDA_avg_cl_2W, .pred))$.estimate),
-#        One_Month = c((lm_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (ridge_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (lasso_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (elastic_net_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate,
-#                     (knn_train_res_1M %>% rsq( NVDA_avg_cl_1M, .pred))$.estimate),
-#        Two_Month = c((lm_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (ridge_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (lasso_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (elastic_net_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate,
-#                     (knn_train_res_2M %>% rsq( NVDA_avg_cl_2M, .pred))$.estimate)
-#        ) %>% 
-#   kable() %>% 
-#   kable_styling(full_width = F) %>% 
-#   scroll_box(width = "100%", height = "200px")
+tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
+       One_Week = c((lm_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (ridge_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (lasso_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (elastic_net_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (knn_train_res  %>% rsq( AMD.Close, .pred))$.estimate ) 
+       ) %>%
+  kable() %>%
+  kable_styling(full_width = F) %>%
+  scroll_box(width = "100%", height = "200px")
 ```
