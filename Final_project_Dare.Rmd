@@ -13,11 +13,9 @@ date: "2024-05-10"
 
 # Introduction
 
-With the growing presence of technology in our society, there is an rapidly increasing demand for hardware which supports our heavy computational demands. One of the most important pieces of computer hardware for computationally-intensive tasks is Graphics Processing Units (GPU) due to their ability to handle a wide range of parallel processing tasks — this has made them an invaluable resource for companies pursing any sort of Artificial Intelligence (AI), super-computing, crypto-currencies, or computer graphics. Unfortunately, the materials needed to produce GPUs are somewhat scarce, thus leading to a small pool of manufacturers that experience significant competition.
+With the growing presence of technology in our society, there is an rapidly increasing demand for hardware which supports our heavy computational demands. One of the most important pieces of computer hardware for computationally-intensive tasks is Graphics Processing Units (GPU) due to their ability to handle a wide range of parallel processing tasks — this has made them an invaluable resource for companies pursing any sort of Artificial Intelligence (AI), super-computing, crypto-currencies, or computer graphics. Consequently, companies which manufacture processing chips have been a focal point for investors in recent years, as they directly control the output capabilities for a large portion of the technology sector.
 
-The purpose of this project is to attempt to predict the price-trends of a fixed semiconductor stock (in this case, that of NVIDIA) based on the performance of its competitors, previous pricing, and volume of shares sold. A variety of statistical learning models will be used, ranging from standard regression techniques to more non-linear models like random forest learning and k-Nearest neighbors. 
-
-
+The purpose of this project is to attempt to predict the price-trends of a semiconductor stock - in fact, there are actually four stocks we wish to predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the project guideline of applying a variety of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most useful for stock market prediction (in the case of semiconductor stocks). Put differently, if we only applied our statistical learning models to a single stock resulting in an optimal model $M$, this would naturally raise the question of whether $M$ fits the stock best because it is optimal for stock market predictions, or if it fits the stock best due to the stock's characteristics. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models , ranging from standard regression to more non-linear models like random forest learning and k-Nearest neighbors.
 
 # Loading Packages and Data
 
@@ -45,50 +43,75 @@ conflicted::conflicts_prefer(dplyr::lag)
 set.seed(3435)
 ```
 
-This dataset is comprised of 1 year's worth ( 252 business / trading days ) of New York Stock Exchange data for twelve of the most popular semiconductor manufacturers: Advanced Micro Devices (AMD), Applied Materials Inc. (AMAT), ASML Holding N.V. (ASML), Broadcom Inc. (AVGO), Intel Corporation (INTC), Monolithic Power Systems Inc. (MPWR), Nvidia Corp. (NVDA), NXP Semiconductors NV (NXPI), On Semiconductor Corp. (ON), Qualcomm Inc. (QCOM), Taiwan Semiconductor Manufacturing Co. Ltd. (TSM), and Texas Instruments Inc (TXN).
+One of the most useful packages for the analysis of stock market data in R is the `quantmod` package. While there are several built-in functions and tools which predict stock market trends using statistical learning, we will simply use this package for the purpose of pulling live stock data from  [Yahoo Finance](https://finance.yahoo.com/) and visualizing the data in a much neater fashion than usual `ggplot2` (in addition, using built-in statistical learning methods in a statistical learning project is somewhat poor form). 
 
-All stock market data was obtained from [Yahoo Finance](https://finance.yahoo.com/). Each company's one-year historical stock data was individually pulled from Yahoo's historical data on April 12th, 2024. For example, AMD's stock prices were obtained by downloading the CSV file from [AMD's Historical Data page](https://finance.yahoo.com/quote/AMD/history/), which results in a dataframe with the following variables and entries:
+In particular, the `quantmod` package  allows us to circumvent the process of downloading a CSV file of stock market data from the internet and read it into R by using the `loadSymbols` method, which then automatically loads all stock data (over a potentially specified interval) into a table assigned the same name as the stock's symbol. Since the function `loadSymbols` will automatically set the most recent day to pull stock data as the current day, we must specify a "last day" to pull our stock data to ensure that our models run the same every day; thus, we will pull __one fiscal year's worth of stock data__ ranging over all of 2023. It should also be noted that the table loaded by `loadSymbols` is __not__ a data-frame; its original datatype must be used to aesthetically plot all the stock information via `chartSeries`, but we will later need to typecast this object to a usual data-frame in order to apply most of the `tidyverse` functions.
+
+Below are formatted plots of the market data pulled for our four stocks: AMD, NVDA, INTC, and TSM. We will postpone the discussion of what several variables mean until the Exploratory Data Analysis section below.
+
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE}
-loadSymbols("AMD", from="2023-01-01")
+a<-loadSymbols("AMD", from="2023-01-01", to="2024-01-01")
 chartSeries(AMD,TA=c(addVo(),addBBands(),addMACD()))
 my_dates <- index(AMD)
 AMD <- data.frame(AMD)
 AMD$AMD.Date <- my_dates
 ```
 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+a<-loadSymbols("NVDA", from="2023-01-01", to="2024-01-01")
+chartSeries(NVDA,TA=c(addVo(),addBBands(),addMACD()))
+NVDA <- data.frame(NVDA)
+NVDA$NVDA.Date <- my_dates
+```
 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+a<-loadSymbols("INTC", from="2023-01-01", to="2024-01-01")
+chartSeries(INTC,TA=c(addVo(),addBBands(),addMACD()))
+INTC <- data.frame(INTC)
+INTC$INTC.Date <- my_dates
+```
 
-However, since one goal of this analysis is to test the affect of competitor's stock performance on a fixed GPU manufacturer's stock price, multiple CSV files must be stored into raw data. The easiest way to do this was to create a separate CSV file, with header columns renamed to both resolve variable name conflicts and to distinguish the data specific to certain stocks. This was simply done by adding the stock's symbol (i.e. AMD, INTC, etc.) to the beginning of the original variable name: 
+```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+a<-loadSymbols("TSM", from="2023-01-01", to="2024-01-01")
+chartSeries(TSM,TA=c(addVo(),addBBands(),addMACD()))
+TSM <- data.frame(TSM)
+TSM$TSM.Date <- my_dates
+```
 
-
-
-This results in a seemingly large initial data frame that contains different 73 predictors and 252 entries (corresponding to the 252 days that the stock market is open throughout the fiscal year). Out of the 73 predictors is 1 date variable (which is formatted as a Date data type using `as.Date()` ), and 6 predictors for each of the 12 chosen semiconductor manufacturers.
+With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks, we need only examine one of our four symbols since all predictors are the same:
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE}
 dim(AMD)
 ```
 
-Fortunately, a quick analysis shows that there is no missing data among any of the CSV files downloaded. This is somewhat expected though, since stock market data is meant to be as publicly available as possible and the original features are fairly common metrics for financial institutions to collect.
+One may be initially misled by the fact that only 250 observations appear across a years worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a hanful of holidays.  In addition, a quick analysis shows that there is no missing data among any of the four stocks; however, this is somewhat expected since stock market data is meant to be as publicly available as possible and the original features are fairly common metrics for financial institutions to collect.
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 vis_miss(AMD)
+vis_miss(NVDA)
+vis_miss(INTC)
+vis_miss(TSM)
 ```
-
 
 # Exploratory Data Analysis
 
-We examine the data in terms of the predictors that are given to us, and then see if there are any other possible metrics to analyze our stock prices by. First we wish to explain the relevance of each predictor in the initial data frame, though not all variables will be used in our predictive models due to a high correlation (for example, the previous day's closing price is heavily correlated to the current day's opening price). Next, we examine other possible methods to predict our stocks behavior by looking at both historical metrics and normalized metrics. 
+With our four stocks pulled and loaded into data frames, we first wish to examine the relevance of each predictor  initially provided and then examine other possible metrics to measure the performance of a given stock by. As measuring the performance of a financial security over time relies on not only historical data, but historical data whose relevancy may depreciate depending on how recent it is (or isn't), much of the rationale behind our added predictors in the latter half of this section revolves around study of _time-series_ in statistics. However, since the focus of this project is on statistical-learning models and how they are applied to certain problems, several important techniques in the study of time-series (and thus stock-market analysis) will not be applied within this project. 
+
 
 ## Describing the Predictors
 
-* `Open`: 
-* `Close`:
-* `Low`:
-* `High`:
-* `Volume`:
+In the first half of this section, we first examine the initial predictors loaded into the the data frames for our stocks. For each of the four stock symbols (AMD, NVDA, INTC, and TSM), we only consider the term following the delimiter `"."` and our stock symbol:
 
-For each of the 12 semiconductor manufacturers chosen (AMAT, AMD, ASML, AVGO, INTC, MPWR, NVDA, NXPI, ON, QCOM, TSM, and TXN), there is a variable called xx_Open (where xx is one of the above stock symbols) which corresponds to that stock's opening price for the day. As the New York Stock exchange operates from 9:30AM to 4:00PM, this indicates the stock's price at 9:30AM that day. 
+*   `Open`: The opening price of the stock that day (specifically, the value of the stock at 9:30AM EST).
+*   `Close`: The closing price of the stock that day (specifically, the value of the stock at 4:00PM EST)
+*   `Low`: The minimum valuation of the stock over the given day.
+*   `High`: The maximum valuation of the stock over the given day.
+*   `Volume`: The total number of shares traded on a stock over the given day (i.e. both bought and sold).
+*   `Adjusted`: The closing price of the stock that day together with any adjustments due to corporate actions such as rights offerings, dividends, and splits.
+
+
+The `dygraph` package loaded in the section provides a compact and convenient way for us to measure _most_ of the above predictors simultaneously for each stock:
 
 ```{r include = TRUE, warning = FALSE, message = FALSE }
 p <- dygraph(AMD[,c(1:4)], xlab = "Date", ylab = "Price", main = "AMD Price") %>%
@@ -104,7 +127,55 @@ p <- dygraph(AMD[,c(1:4)], xlab = "Date", ylab = "Price", main = "AMD Price") %>
 p
 ```
 
+```{r include = TRUE, warning = FALSE, message = FALSE }
+p <- dygraph(NVDA[,c(1:4)], xlab = "Date", ylab = "Price", main = "NVDA Price") %>%
+  dySeries("NVDA.Open", label = "Open", color = "black") %>%
+  dySeries("NVDA.Low", label = "Low", color = "red") %>%
+  dySeries("NVDA.High", label = "High", color = "green") %>%
+  dySeries("NVDA.Close", label = "Close", color = "orange") %>%
+  dyRangeSelector() %>%
+  dyCandlestick()%>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1)
+p
+```
 
+```{r include = TRUE, warning = FALSE, message = FALSE }
+p <- dygraph(INTC[,c(1:4)], xlab = "Date", ylab = "Price", main = "INTC Price") %>%
+  dySeries("INTC.Open", label = "Open", color = "black") %>%
+  dySeries("INTC.Low", label = "Low", color = "red") %>%
+  dySeries("INTC.High", label = "High", color = "green") %>%
+  dySeries("INTC.Close", label = "Close", color = "orange") %>%
+  dyRangeSelector() %>%
+  dyCandlestick()%>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1)
+p
+```
+
+```{r include = TRUE, warning = FALSE, message = FALSE }
+p <- dygraph(TSM[,c(1:4)], xlab = "Date", ylab = "Price", main = "TSM Price") %>%
+  dySeries("TSM.Open", label = "Open", color = "black") %>%
+  dySeries("TSM.Low", label = "Low", color = "red") %>%
+  dySeries("TSM.High", label = "High", color = "green") %>%
+  dySeries("TSM.Close", label = "Close", color = "orange") %>%
+  dyRangeSelector() %>%
+  dyCandlestick()%>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1)
+p
+```
+
+## Added Predictors and Metrics
+
+While the six predictors pulled from Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our securities. For example, since all additional predictors introduced rely on the analysis of recent data, the most important concept to first introduct is that of a _lag variable_.
+
+### Lag Values
+
+Given a time series problem specified by events and observations $\{(t_1, y_1), \dots, (t_n, y_n) \}$, the value of $y_n$ in some way depends on the values of $y_{n-1}, \dots, y_1$. 
 
 ```{r include = TRUE, warning = FALSE, message = FALSE }
 AMD$AMD.Close_L1 <- lag(AMD$AMD.Close, 1)
@@ -117,10 +188,7 @@ AMD$AMD.Close_L7 <- lag(AMD$AMD.Close, 7)
 AMD$AMD.Close_L8 <- lag(AMD$AMD.Close, 8)
 AMD$AMD.Close_L9 <- lag(AMD$AMD.Close, 9)
 AMD$AMD.Close_L10 <- lag(AMD$AMD.Close, 10)
-AMD$AMD.Close_L11 <- lag(AMD$AMD.Close, 11)
-AMD$AMD.Close_L12 <- lag(AMD$AMD.Close, 12)
-AMD$AMD.Close_L13 <- lag(AMD$AMD.Close, 13)
-AMD$AMD.Close_L14 <- lag(AMD$AMD.Close, 14)
+
 
 
 AMD <- AMD %>%
@@ -133,27 +201,99 @@ AMD <- AMD %>%
   fill(AMD.Close_L7, .direction = "up") %>% 
   fill(AMD.Close_L8, .direction = "up") %>% 
   fill(AMD.Close_L9, .direction = "up") %>% 
-  fill(AMD.Close_L10, .direction = "up") %>% 
-  fill(AMD.Close_L11, .direction = "up") %>%
-  fill(AMD.Close_L12, .direction = "up") %>%
-  fill(AMD.Close_L13, .direction = "up") %>% 
-  fill(AMD.Close_L14, .direction = "up") 
+  fill(AMD.Close_L10, .direction = "up") 
+
 ```
- 
-## Added Predictors and Metrics
 
-While the six predictors provided by Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our stocks. The main kind of variables we wish to introduce are ones which simply keep track of data from previous days; since each predictor in our original data frame only applies to a 24-hour window, there could be some potentially important information in the long-term trends of a stock which ultimately affect a share's price.
+```{r include = TRUE, warning = FALSE, message = FALSE }
+NVDA$NVDA.Close_L1 <- lag(NVDA$NVDA.Close, 1)
+NVDA$NVDA.Close_L2 <- lag(NVDA$NVDA.Close, 2)
+NVDA$NVDA.Close_L3 <- lag(NVDA$NVDA.Close, 3)
+NVDA$NVDA.Close_L4 <- lag(NVDA$NVDA.Close, 4)
+NVDA$NVDA.Close_L5 <- lag(NVDA$NVDA.Close, 5)
+NVDA$NVDA.Close_L6 <- lag(NVDA$NVDA.Close, 6)
+NVDA$NVDA.Close_L7 <- lag(NVDA$NVDA.Close, 7)
+NVDA$NVDA.Close_L8 <- lag(NVDA$NVDA.Close, 8)
+NVDA$NVDA.Close_L9 <- lag(NVDA$NVDA.Close, 9)
+NVDA$NVDA.Close_L10 <- lag(NVDA$NVDA.Close, 10)
 
+
+
+NVDA <- NVDA %>%
+  fill(NVDA.Close_L1, .direction = "up") %>%
+  fill(NVDA.Close_L2, .direction = "up") %>%
+  fill(NVDA.Close_L3, .direction = "up") %>% 
+  fill(NVDA.Close_L4, .direction = "up") %>% 
+  fill(NVDA.Close_L5, .direction = "up") %>% 
+  fill(NVDA.Close_L6, .direction = "up") %>% 
+  fill(NVDA.Close_L7, .direction = "up") %>% 
+  fill(NVDA.Close_L8, .direction = "up") %>% 
+  fill(NVDA.Close_L9, .direction = "up") %>% 
+  fill(NVDA.Close_L10, .direction = "up")
+```
+
+```{r include = TRUE, warning = FALSE, message = FALSE }
+INTC$INTC.Close_L1 <- lag(INTC$INTC.Close, 1)
+INTC$INTC.Close_L2 <- lag(INTC$INTC.Close, 2)
+INTC$INTC.Close_L3 <- lag(INTC$INTC.Close, 3)
+INTC$INTC.Close_L4 <- lag(INTC$INTC.Close, 4)
+INTC$INTC.Close_L5 <- lag(INTC$INTC.Close, 5)
+INTC$INTC.Close_L6 <- lag(INTC$INTC.Close, 6)
+INTC$INTC.Close_L7 <- lag(INTC$INTC.Close, 7)
+INTC$INTC.Close_L8 <- lag(INTC$INTC.Close, 8)
+INTC$INTC.Close_L9 <- lag(INTC$INTC.Close, 9)
+INTC$INTC.Close_L10 <- lag(INTC$INTC.Close, 10)
+
+
+
+INTC <- INTC %>%
+  fill(INTC.Close_L1, .direction = "up") %>%
+  fill(INTC.Close_L2, .direction = "up") %>%
+  fill(INTC.Close_L3, .direction = "up") %>% 
+  fill(INTC.Close_L4, .direction = "up") %>% 
+  fill(INTC.Close_L5, .direction = "up") %>% 
+  fill(INTC.Close_L6, .direction = "up") %>% 
+  fill(INTC.Close_L7, .direction = "up") %>% 
+  fill(INTC.Close_L8, .direction = "up") %>% 
+  fill(INTC.Close_L9, .direction = "up") %>% 
+  fill(INTC.Close_L10, .direction = "up") 
+```
+
+```{r include = TRUE, warning = FALSE, message = FALSE }
+TSM$TSM.Close_L1 <- lag(TSM$TSM.Close, 1)
+TSM$TSM.Close_L2 <- lag(TSM$TSM.Close, 2)
+TSM$TSM.Close_L3 <- lag(TSM$TSM.Close, 3)
+TSM$TSM.Close_L4 <- lag(TSM$TSM.Close, 4)
+TSM$TSM.Close_L5 <- lag(TSM$TSM.Close, 5)
+TSM$TSM.Close_L6 <- lag(TSM$TSM.Close, 6)
+TSM$TSM.Close_L7 <- lag(TSM$TSM.Close, 7)
+TSM$TSM.Close_L8 <- lag(TSM$TSM.Close, 8)
+TSM$TSM.Close_L9 <- lag(TSM$TSM.Close, 9)
+TSM$TSM.Close_L10 <- lag(TSM$TSM.Close, 10)
+
+
+TSM <- TSM %>%
+  fill(TSM.Close_L1, .direction = "up") %>%
+  fill(TSM.Close_L2, .direction = "up") %>%
+  fill(TSM.Close_L3, .direction = "up") %>% 
+  fill(TSM.Close_L4, .direction = "up") %>% 
+  fill(TSM.Close_L5, .direction = "up") %>% 
+  fill(TSM.Close_L6, .direction = "up") %>% 
+  fill(TSM.Close_L7, .direction = "up") %>% 
+  fill(TSM.Close_L8, .direction = "up") %>% 
+  fill(TSM.Close_L9, .direction = "up") %>% 
+  fill(TSM.Close_L10, .direction = "up") 
+```
 
 ### Simple Moving Average of Closing Price
 
-As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors. 
+As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors.
 
 While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the simple moving average and the simple moving standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the moving value is (i.e. the number of days averaged over) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
 
 Additionally, there is no clear choice for how much previous data to account for — should the analysis look back at a single week's worth of data or a month? As this is itself an interesting question for the sake of tuning our models, **we will consider this an added hyperparameter for the problem** and consider four possible values: 1 week, 2 weeks, 1 month, and 2 months.
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 
 simple_moving_average <- function(my_vec, lag_period) {
   #' Takes the running average of a column vector
@@ -206,6 +346,22 @@ AMD$AMD.SMA_cl_1M <- simple_moving_average(AMD$AMD.Close, 20)
 AMD$AMD.SMA_cl_2M <- simple_moving_average(AMD$AMD.Close, 40)
 
 
+NVDA$NVDA.SMA_cl_1W <- simple_moving_average(NVDA$NVDA.Close, 5)
+NVDA$NVDA.SMA_cl_2W <- simple_moving_average(NVDA$NVDA.Close, 10)
+NVDA$NVDA.SMA_cl_1M <- simple_moving_average(NVDA$NVDA.Close, 20)
+NVDA$NVDA.SMA_cl_2M <- simple_moving_average(NVDA$NVDA.Close, 40)
+
+INTC$INTC.SMA_cl_1W <- simple_moving_average(INTC$INTC.Close, 5)
+INTC$INTC.SMA_cl_2W <- simple_moving_average(INTC$INTC.Close, 10)
+INTC$INTC.SMA_cl_1M <- simple_moving_average(INTC$INTC.Close, 20)
+INTC$INTC.SMA_cl_2M <- simple_moving_average(INTC$INTC.Close, 40)
+
+TSM$TSM.SMA_cl_1W <- simple_moving_average(TSM$TSM.Close, 5)
+TSM$TSM.SMA_cl_2W <- simple_moving_average(TSM$TSM.Close, 10)
+TSM$TSM.SMA_cl_1M <- simple_moving_average(TSM$TSM.Close, 20)
+TSM$TSM.SMA_cl_2M <- simple_moving_average(TSM$TSM.Close, 40)
+
+
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.SMA_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.SMA_cl_2W, color = '2-Week')) +
@@ -219,19 +375,67 @@ ggplot(data = AMD, aes(x=AMD.Date)) +
     '2-Month' = 'chartreuse'
   )) +
   xlab('Date') +
-  ggtitle("Simple Moving Average") +
-  scale_y_continuous(limits = c(0, 220), labels = label_comma()) +
+  ggtitle("(AMD) Simple Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = NVDA, aes(x=NVDA.Date)) +
+  geom_line(aes(y = NVDA.SMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = NVDA.SMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = NVDA.SMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = NVDA.SMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(NVDA) Simple Moving Average") +
+  scale_y_continuous(  labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = INTC, aes(x=INTC.Date)) +
+  geom_line(aes(y = INTC.SMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = INTC.SMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = INTC.SMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = INTC.SMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(INTC) Simple Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = TSM, aes(x=TSM.Date)) +
+  geom_line(aes(y = TSM.SMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = TSM.SMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = TSM.SMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = TSM.SMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(TSM) Simple Moving Average") +
+  scale_y_continuous(labels = label_comma()) +
   theme_dark()
 ```
 
 One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
 
-
-
- 
 ### Exponential Moving Average
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+```{r  eval = TRUE, include=TRUE, warnings=FALSE , fig.show="hold", out.width="50%"}
 exponential_moving_average_helper <- function(my_vec, lag_period, smoothing_factor) {
   #' Helper function to evaluate the exponential moving average over a fixed period 
   #' using an array buffer
@@ -326,6 +530,21 @@ AMD$AMD.EMA_cl_2W <- exponential_moving_average(AMD$AMD.Close, 10)
 AMD$AMD.EMA_cl_1M <- exponential_moving_average(AMD$AMD.Close, 20)
 AMD$AMD.EMA_cl_2M <- exponential_moving_average(AMD$AMD.Close, 40)
 
+NVDA$NVDA.EMA_cl_1W <- exponential_moving_average(NVDA$NVDA.Close, 5)
+NVDA$NVDA.EMA_cl_2W <- exponential_moving_average(NVDA$NVDA.Close, 10)
+NVDA$NVDA.EMA_cl_1M <- exponential_moving_average(NVDA$NVDA.Close, 20)
+NVDA$NVDA.EMA_cl_2M <- exponential_moving_average(NVDA$NVDA.Close, 40)
+
+INTC$INTC.EMA_cl_1W <- exponential_moving_average(INTC$INTC.Close, 5)
+INTC$INTC.EMA_cl_2W <- exponential_moving_average(INTC$INTC.Close, 10)
+INTC$INTC.EMA_cl_1M <- exponential_moving_average(INTC$INTC.Close, 20)
+INTC$INTC.EMA_cl_2M <- exponential_moving_average(INTC$INTC.Close, 40)
+
+TSM$TSM.EMA_cl_1W <- exponential_moving_average(TSM$TSM.Close, 5)
+TSM$TSM.EMA_cl_2W <- exponential_moving_average(TSM$TSM.Close, 10)
+TSM$TSM.EMA_cl_1M <- exponential_moving_average(TSM$TSM.Close, 20)
+TSM$TSM.EMA_cl_2M <- exponential_moving_average(TSM$TSM.Close, 40)
+
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.EMA_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.EMA_cl_2W, color = '2-Week')) +
@@ -339,20 +558,67 @@ ggplot(data = AMD, aes(x=AMD.Date)) +
     '2-Month' = 'chartreuse'
   )) +
   xlab('Date') +
-  ggtitle("Exponential Moving Average") +
-  scale_y_continuous(limits = c(0, 220), labels = label_comma()) +
+  ggtitle("(AMD) Exponential Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = NVDA, aes(x=NVDA.Date)) +
+  geom_line(aes(y = NVDA.EMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = NVDA.EMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = NVDA.EMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = NVDA.EMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(NVDA) Exponential Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = INTC, aes(x=INTC.Date)) +
+  geom_line(aes(y = INTC.EMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = INTC.EMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = INTC.EMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = INTC.EMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(INTC) Exponential Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = TSM, aes(x=TSM.Date)) +
+  geom_line(aes(y = TSM.EMA_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = TSM.EMA_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = TSM.EMA_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = TSM.EMA_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(TSM) Exponential Moving Average") +
+  scale_y_continuous( labels = label_comma()) +
   theme_dark()
 ```
-
-
-
-
 
 ### Simple Moving Deviation of Closing Price
 
 With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%" }
 simple_moving_deviation <- function(my_vec, lag_period) {
   #' Takes the running standard deviation of a column vector
   #'
@@ -410,6 +676,21 @@ AMD$AMD.SMD_cl_2W <- simple_moving_deviation(AMD$AMD.Close, 10)
 AMD$AMD.SMD_cl_1M <- simple_moving_deviation(AMD$AMD.Close, 20)
 AMD$AMD.SMD_cl_2M <- simple_moving_deviation(AMD$AMD.Close, 40)
 
+NVDA$NVDA.SMD_cl_1W <- simple_moving_deviation(NVDA$NVDA.Close, 5)
+NVDA$NVDA.SMD_cl_2W <- simple_moving_deviation(NVDA$NVDA.Close, 10)
+NVDA$NVDA.SMD_cl_1M <- simple_moving_deviation(NVDA$NVDA.Close, 20)
+NVDA$NVDA.SMD_cl_2M <- simple_moving_deviation(NVDA$NVDA.Close, 40)
+
+INTC$INTC.SMD_cl_1W <- simple_moving_deviation(INTC$INTC.Close, 5)
+INTC$INTC.SMD_cl_2W <- simple_moving_deviation(INTC$INTC.Close, 10)
+INTC$INTC.SMD_cl_1M <- simple_moving_deviation(INTC$INTC.Close, 20)
+INTC$INTC.SMD_cl_2M <- simple_moving_deviation(INTC$INTC.Close, 40)
+
+TSM$TSM.SMD_cl_1W <- simple_moving_deviation(TSM$TSM.Close, 5)
+TSM$TSM.SMD_cl_2W <- simple_moving_deviation(TSM$TSM.Close, 10)
+TSM$TSM.SMD_cl_1M <- simple_moving_deviation(TSM$TSM.Close, 20)
+TSM$TSM.SMD_cl_2M <- simple_moving_deviation(TSM$TSM.Close, 40)
+
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.SMD_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.SMD_cl_2W, color = '2-Week')) +
@@ -423,18 +704,69 @@ ggplot(data = AMD, aes(x=AMD.Date)) +
     '2-Month' = 'chartreuse'
   )) +
   xlab('Date') +
-  ggtitle("Simple Moving Deviation") +
-  scale_y_continuous(limits = c(0, 25), labels = label_comma()) +
+  ggtitle("(AMD) Simple Moving Deviation") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = NVDA, aes(x=NVDA.Date)) +
+  geom_line(aes(y = NVDA.SMD_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = NVDA.SMD_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = NVDA.SMD_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = NVDA.SMD_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(NVDA) Simple Moving Deviation") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = INTC, aes(x=INTC.Date)) +
+  geom_line(aes(y = INTC.SMD_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = INTC.SMD_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = INTC.SMD_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = INTC.SMD_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(INTC) Simple Moving Deviation") +
+  scale_y_continuous(  labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = TSM, aes(x=TSM.Date)) +
+  geom_line(aes(y = TSM.SMD_cl_1W, color = '1-Week')) + 
+  geom_line(aes(y = TSM.SMD_cl_2W, color = '2-Week')) +
+  geom_line(aes(y = TSM.SMD_cl_1M, color = '1-Month')) +
+  geom_line(aes(y = TSM.SMD_cl_2M, color = '2-Month')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    '1-Week' = 'firebrick1',
+    '2-Week' = 'chocolate1',
+    '1-Month' = 'gold',
+    '2-Month' = 'chartreuse'
+  )) +
+  xlab('Date') +
+  ggtitle("(TSM) Simple Moving Deviation") +
+  scale_y_continuous( labels = label_comma()) +
   theme_dark()
 ```
 
-
-
 ### Moving Average Convergence Divergence (MACD)
 
-
-```{r  eval = TRUE, include=TRUE, warnings=FALSE }
+```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%" }
 AMD$AMD.MACD = (AMD$AMD.EMA_cl_2W - AMD$AMD.EMA_cl_1M)
+NVDA$NVDA.MACD = (NVDA$NVDA.EMA_cl_2W - NVDA$NVDA.EMA_cl_1M)
+INTC$INTC.MACD = (INTC$INTC.EMA_cl_2W - INTC$INTC.EMA_cl_1M)
+TSM$TSM.MACD = (TSM$TSM.EMA_cl_2W - TSM$TSM.EMA_cl_1M)
 
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.MACD, color = 'MACD')) +
@@ -443,11 +775,43 @@ ggplot(data = AMD, aes(x=AMD.Date)) +
     'MACD' = 'aquamarine'
   )) +
   xlab('Date') +
-  ggtitle("MACD Line") +
-  scale_y_continuous(limits = c(-10, 10), labels = label_comma()) +
+  ggtitle("AMD MACD Line") +
+  scale_y_continuous(  labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = NVDA, aes(x=NVDA.Date)) +
+  geom_line(aes(y = NVDA.MACD, color = 'MACD')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'MACD' = 'aquamarine'
+  )) +
+  xlab('Date') +
+  ggtitle("NVDA MACD Line") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = INTC, aes(x=INTC.Date)) +
+  geom_line(aes(y = INTC.MACD, color = 'MACD')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'MACD' = 'aquamarine'
+  )) +
+  xlab('Date') +
+  ggtitle("INTC MACD Line") +
+  scale_y_continuous( labels = label_comma()) +
+  theme_dark()
+
+ggplot(data = TSM, aes(x=TSM.Date)) +
+  geom_line(aes(y = TSM.MACD, color = 'MACD')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'MACD' = 'aquamarine'
+  )) +
+  xlab('Date') +
+  ggtitle("TSM MACD Line") +
+  scale_y_continuous(  labels = label_comma()) +
   theme_dark()
 ```
-
 
 ## Data Correlation
 
@@ -460,52 +824,138 @@ select(AMD, is.numeric) %>%
   cor() %>%
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="Correlation Plot")
 ```
- 
 
- 
+```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="33%" }
+select(NVDA, NVDA.Close, NVDA.Volume, NVDA.SMD_cl_1W, NVDA.SMD_cl_2W, NVDA.SMD_cl_1M, NVDA.SMD_cl_2M, NVDA.MACD) %>%
+  cor() %>%
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="NVDA Correlation Plot" )
+select(INTC, INTC.Close, INTC.Volume, INTC.SMD_cl_1W, INTC.SMD_cl_2W, INTC.SMD_cl_1M, INTC.SMD_cl_2M, INTC.MACD) %>%
+  cor() %>%
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="INTC Correlation Plot")
+select(TSM, TSM.Close, TSM.Volume, TSM.SMD_cl_1W, TSM.SMD_cl_2W, TSM.SMD_cl_1M, TSM.SMD_cl_2M, TSM.MACD) %>%
+  cor() %>%
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="TSM Correlation Plot")
 
+```
 
 # Setting Up Models
 
 With a better picture in mind of how our stock prices can be measured from both the given metrics and how they interact with one another, we can now set up our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular data-set.
 
-
 ### Data Split
 
 One of the primary ways we ensure robustness of our models is by partitioning our data into training and testing data. Foremost, this ensures that our model does not become overfit to the details and noise of our underlying data-set by introducing a portion of the data which is unseen during the training phase (i.e. the testing data). Ultimately, one would want outcome variable to have similar statistics / variance across both the training and testing sets — this is accomplished by *stratifying* our split about the desired outcome variable.
-
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 AMD_split <- initial_split(AMD, prop = 0.7,
                                 strata = AMD.Close)
 AMD_train <- training(AMD_split)
 AMD_test <- testing(AMD_split)
-
 ```
 
-
-## One-Week Model Fitting
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+NVDA_split <- initial_split(NVDA, prop = 0.7,
+                                strata = NVDA.Close)
+NVDA_train <- training(NVDA_split)
+NVDA_test <- testing(NVDA_split)
+```
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
+INTC_split <- initial_split(INTC, prop = 0.7,
+                                strata = INTC.Close)
+INTC_train <- training(INTC_split)
+INTC_test <- testing(INTC_split)
+```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+TSM_split <- initial_split(TSM, prop = 0.7,
+                                strata = TSM.Close)
+TSM_train <- training(TSM_split)
+TSM_test <- testing(TSM_split)
+```
+
+## Model Fitting
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
 AMD_recipe = recipe(AMD.Close ~ AMD.Close_L1 + AMD.Close_L2 + AMD.Close_L3 + AMD.Close_L4 +
                       AMD.Close_L5 + AMD.Close_L6 + AMD.Close_L7 + AMD.Close_L8 + AMD.Close_L9 +
-                      AMD.Close_L10 + AMD.Close_L11 + AMD.Close_L12 + AMD.Close_L13 + AMD.Close_L14 +
-                      AMD.SMD_cl_1W + AMD.SMA_cl_1W + AMD.MACD,
+                      AMD.Close_L10 + AMD.SMD_cl_1W + AMD.SMA_cl_1W + AMD.MACD,
                     data=AMD_train) %>%
+  step_interact(terms= ~ AMD.Close_L1:AMD.Close_L2) %>%
+  step_interact(terms= ~ AMD.Close_L2:AMD.Close_L3) %>%
+  step_interact(terms= ~ AMD.Close_L3:AMD.Close_L4) %>%
+  step_interact(terms= ~ AMD.Close_L4:AMD.Close_L5) %>%
+  step_interact(terms= ~ AMD.Close_L5:AMD.Close_L6) %>%
+  step_interact(terms= ~ AMD.Close_L6:AMD.Close_L7) %>%
+  step_interact(terms= ~ AMD.Close_L7:AMD.Close_L8) %>%
+  step_interact(terms= ~ AMD.Close_L8:AMD.Close_L9) %>%
+  step_interact(terms= ~ AMD.Close_L9:AMD.Close_L10) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
 ```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+NVDA_recipe = recipe(NVDA.Close ~ NVDA.Close_L1 + NVDA.Close_L2 + NVDA.Close_L3 + NVDA.Close_L4 + NVDA.Close_L5 + 
+                       NVDA.Close_L6 + NVDA.Close_L7 + NVDA.Close_L8 + NVDA.Close_L9 + NVDA.Close_L10 +  
+                      NVDA.SMD_cl_1W + NVDA.SMA_cl_1W  + NVDA.MACD,
+                    data=NVDA_train) %>%
+  step_interact(terms= ~ NVDA.Close_L1:NVDA.Close_L2) %>%
+  step_interact(terms= ~ NVDA.Close_L2:NVDA.Close_L3) %>%
+  step_interact(terms= ~ NVDA.Close_L3:NVDA.Close_L4) %>%
+  step_interact(terms= ~ NVDA.Close_L4:NVDA.Close_L5) %>%
+  step_interact(terms= ~ NVDA.Close_L5:NVDA.Close_L6) %>%
+  step_interact(terms= ~ NVDA.Close_L6:NVDA.Close_L7) %>%
+  step_interact(terms= ~ NVDA.Close_L7:NVDA.Close_L8) %>%
+  step_interact(terms= ~ NVDA.Close_L8:NVDA.Close_L9) %>%
+  step_interact(terms= ~ NVDA.Close_L9:NVDA.Close_L10) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+INTC_recipe = recipe(INTC.Close ~ INTC.Close_L1 + INTC.Close_L2 + INTC.Close_L3 + INTC.Close_L4 +
+                      INTC.Close_L5 + INTC.Close_L6 + INTC.Close_L7 + INTC.Close_L8 + INTC.Close_L9 + INTC.Close_L10  +
+                      INTC.SMD_cl_1W + INTC.SMA_cl_1W + INTC.EMA_cl_1W + INTC.MACD,
+                    data=INTC_train) %>%
+  step_interact(terms= ~ INTC.Close_L1:INTC.Close_L2) %>%
+  step_interact(terms= ~ INTC.Close_L2:INTC.Close_L3) %>%
+  step_interact(terms= ~ INTC.Close_L3:INTC.Close_L4) %>%
+  step_interact(terms= ~ INTC.Close_L4:INTC.Close_L5) %>%
+  step_interact(terms= ~ INTC.Close_L5:INTC.Close_L6) %>%
+  step_interact(terms= ~ INTC.Close_L6:INTC.Close_L7) %>%
+  step_interact(terms= ~ INTC.Close_L7:INTC.Close_L8) %>%
+  step_interact(terms= ~ INTC.Close_L8:INTC.Close_L9) %>%
+  step_interact(terms= ~ INTC.Close_L9:INTC.Close_L10) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+TSM_recipe = recipe(TSM.Close ~ TSM.Close_L1 + TSM.Close_L2 + TSM.Close_L3 + TSM.Close_L4 +
+                      TSM.Close_L5 + TSM.Close_L6 + TSM.Close_L7 + TSM.Close_L8 + TSM.Close_L9 + TSM.Close_L10 +
+                      TSM.SMD_cl_1W + TSM.SMA_cl_1W + TSM.EMA_cl_1W + TSM.MACD,
+                    data=TSM_train) %>%
+  step_interact(terms= ~ TSM.Close_L1:TSM.Close_L2) %>%
+  step_interact(terms= ~ TSM.Close_L2:TSM.Close_L3) %>%
+  step_interact(terms= ~ TSM.Close_L3:TSM.Close_L4) %>%
+  step_interact(terms= ~ TSM.Close_L4:TSM.Close_L5) %>%
+  step_interact(terms= ~ TSM.Close_L5:TSM.Close_L6) %>%
+  step_interact(terms= ~ TSM.Close_L6:TSM.Close_L7) %>%
+  step_interact(terms= ~ TSM.Close_L7:TSM.Close_L8) %>%
+  step_interact(terms= ~ TSM.Close_L8:TSM.Close_L9) %>%
+  step_interact(terms= ~ TSM.Close_L9:TSM.Close_L10) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+```
 
 ## k-Fold Cross Validation
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = AMD.Close)
+NVDA_folds  <- vfold_cv(NVDA_train, v = 10, strata = NVDA.Close)
+INTC_folds  <- vfold_cv(INTC_train, v = 10, strata = INTC.Close)
+TSM_folds  <- vfold_cv(TSM_train, v = 10, strata = TSM.Close)
 ```
-
-
 
 ## Fitting the Models
 
@@ -540,42 +990,120 @@ knn_model <- nearest_neighbor(neighbors = tune()) %>%
   set_mode("regression")
 ```
 
-
-### Set Up Workflows 
+### Set Up Workflows
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Workflows
-lm_wflow <- workflow() %>%
+lm_wflow_AMD <- workflow() %>%
   add_model(lm_model) %>%
   add_recipe(AMD_recipe)
  
 # Ridge Regression Workflows
-ridge_wflow <- workflow() %>%
+ridge_wflow_AMD <- workflow() %>%
   add_model(ridge_model) %>%
   add_recipe(AMD_recipe)
  
 # Lasso Regression Workflows
-lasso_wflow <- workflow() %>%
+lasso_wflow_AMD <- workflow() %>%
   add_model(lasso_model) %>%
   add_recipe(AMD_recipe)
  
 # Elastic Net Workflows
-elastic_net_wflow <- workflow() %>%
+elastic_net_wflow_AMD <- workflow() %>%
   add_model(elastic_net_model) %>%
   add_recipe(AMD_recipe)
   
 # k-Nearest Neighbors Workflows
-knn_wflow <- workflow() %>%
+knn_wflow_AMD <- workflow() %>%
   add_model(knn_model) %>%
   add_recipe(AMD_recipe)
 ```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Workflows
+lm_wflow_NVDA <- workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(NVDA_recipe)
+ 
+# Ridge Regression Workflows
+ridge_wflow_NVDA <- workflow() %>%
+  add_model(ridge_model) %>%
+  add_recipe(NVDA_recipe)
+ 
+# Lasso Regression Workflows
+lasso_wflow_NVDA <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(NVDA_recipe)
+ 
+# Elastic Net Workflows
+elastic_net_wflow_NVDA <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(NVDA_recipe)
+  
+# k-Nearest Neighbors Workflows
+knn_wflow_NVDA <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(NVDA_recipe)
+```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Workflows
+lm_wflow_INTC <- workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(INTC_recipe)
+ 
+# Ridge Regression Workflows
+ridge_wflow_INTC <- workflow() %>%
+  add_model(ridge_model) %>%
+  add_recipe(INTC_recipe)
+ 
+# Lasso Regression Workflows
+lasso_wflow_INTC <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(INTC_recipe)
+ 
+# Elastic Net Workflows
+elastic_net_wflow_INTC <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(INTC_recipe)
+  
+# k-Nearest Neighbors Workflows
+knn_wflow_INTC <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(INTC_recipe)
+```
 
-### Hyperparameter Tuning 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Workflows
+lm_wflow_TSM <- workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(TSM_recipe)
+ 
+# Ridge Regression Workflows
+ridge_wflow_TSM <- workflow() %>%
+  add_model(ridge_model) %>%
+  add_recipe(TSM_recipe)
+ 
+# Lasso Regression Workflows
+lasso_wflow_TSM <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(TSM_recipe)
+ 
+# Elastic Net Workflows
+elastic_net_wflow_TSM <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(TSM_recipe)
+  
+# k-Nearest Neighbors Workflows
+knn_wflow_TSM <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(TSM_recipe)
+```
 
+### Hyperparameter Tuning
 
 Set up Grids:
+
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Grid for Ridge Regression and Lasso Regression
 no_mixture_grid <- grid_regular(penalty(range = c(0,1)), levels = 50)
@@ -590,120 +1118,375 @@ elastic_net_grid <- grid_regular(penalty(range = c(0, 1),
 knn_grid <- grid_regular(neighbors(range = c(2,20)), levels = 10)
 ```
 
-
-
-
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-
 # Find optimal parameters for ridge regression
-ridge_tune <- tune_grid(
-  ridge_wflow,
+ridge_tune_AMD <- tune_grid(
+  ridge_wflow_AMD,
   resamples = AMD_folds,
   grid = no_mixture_grid
 )
-ridge_final_wflow  <- select_best(ridge_tune , metric="rmse" ) %>%
-  finalize_workflow(x=ridge_wflow )
+ridge_final_wflow_AMD  <- select_best(ridge_tune_AMD , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_AMD )
 
 # Find optimal parameters for lasso regression
-lasso_tune  <- tune_grid(
-  lasso_wflow ,
+lasso_tune_AMD  <- tune_grid(
+  lasso_wflow_AMD ,
   resamples = AMD_folds,
   grid = no_mixture_grid
 )
-lasso_final_wflow  <- select_best(lasso_tune , metric="rmse") %>%
-  finalize_workflow(x=lasso_wflow )
+lasso_final_wflow_AMD  <- select_best(lasso_tune_AMD , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_AMD )
 
 # Find optimal parameters for Elastic Net
-elastic_net_tune  <- tune_grid(
-  elastic_net_wflow ,
+elastic_net_tune_AMD  <- tune_grid(
+  elastic_net_wflow_AMD ,
   resamples = AMD_folds,
   grid = elastic_net_grid
 )
-elastic_net_final_wflow  <- select_best(elastic_net_tune , metric = "rmse") %>%
-  finalize_workflow(x=elastic_net_wflow )
+elastic_net_final_wflow_AMD  <- select_best(elastic_net_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_AMD )
 
 # Find optimal parameters for k-Nearest Neighbors
-knn_tune  <- tune_grid(
-    knn_wflow ,
+knn_tune_AMD  <- tune_grid(
+    knn_wflow_AMD ,
     resamples = AMD_folds,
     grid = knn_grid
 )
-knn_final_wflow  <- select_best(knn_tune , metric = "rmse") %>%
-  finalize_workflow(x=knn_wflow )
+knn_final_wflow_AMD  <- select_best(knn_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_AMD )
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Find optimal parameters for ridge regression
+ridge_tune_NVDA <- tune_grid(
+  ridge_wflow_NVDA,
+  resamples = NVDA_folds,
+  grid = no_mixture_grid
+)
+ridge_final_wflow_NVDA  <- select_best(ridge_tune_NVDA , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_NVDA )
+
+# Find optimal parameters for lasso regression
+lasso_tune_NVDA  <- tune_grid(
+  lasso_wflow_NVDA ,
+  resamples = NVDA_folds,
+  grid = no_mixture_grid
+)
+lasso_final_wflow_NVDA  <- select_best(lasso_tune_NVDA , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_NVDA )
+
+# Find optimal parameters for Elastic Net
+elastic_net_tune_NVDA  <- tune_grid(
+  elastic_net_wflow_NVDA ,
+  resamples = NVDA_folds,
+  grid = elastic_net_grid
+)
+elastic_net_final_wflow_NVDA  <- select_best(elastic_net_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_NVDA )
+
+# Find optimal parameters for k-Nearest Neighbors
+knn_tune_NVDA  <- tune_grid(
+    knn_wflow_NVDA ,
+    resamples = NVDA_folds,
+    grid = knn_grid
+)
+knn_final_wflow_NVDA  <- select_best(knn_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_NVDA )
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Find optimal parameters for ridge regression
+ridge_tune_INTC <- tune_grid(
+  ridge_wflow_INTC,
+  resamples = INTC_folds,
+  grid = no_mixture_grid
+)
+ridge_final_wflow_INTC  <- select_best(ridge_tune_INTC , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_INTC )
+
+# Find optimal parameters for lasso regression
+lasso_tune_INTC  <- tune_grid(
+  lasso_wflow_INTC ,
+  resamples = INTC_folds,
+  grid = no_mixture_grid
+)
+lasso_final_wflow_INTC  <- select_best(lasso_tune_INTC , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_INTC )
+
+# Find optimal parameters for Elastic Net
+elastic_net_tune_INTC  <- tune_grid(
+  elastic_net_wflow_INTC ,
+  resamples = INTC_folds,
+  grid = elastic_net_grid
+)
+elastic_net_final_wflow_INTC  <- select_best(elastic_net_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_INTC )
+
+# Find optimal parameters for k-Nearest Neighbors
+knn_tune_INTC  <- tune_grid(
+    knn_wflow_INTC ,
+    resamples = INTC_folds,
+    grid = knn_grid
+)
+knn_final_wflow_INTC  <- select_best(knn_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_INTC )
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Find optimal parameters for ridge regression
+ridge_tune_TSM <- tune_grid(
+  ridge_wflow_TSM,
+  resamples = TSM_folds,
+  grid = no_mixture_grid
+)
+ridge_final_wflow_TSM  <- select_best(ridge_tune_TSM , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_TSM )
+
+# Find optimal parameters for lasso regression
+lasso_tune_TSM  <- tune_grid(
+  lasso_wflow_TSM ,
+  resamples = TSM_folds,
+  grid = no_mixture_grid
+)
+lasso_final_wflow_TSM  <- select_best(lasso_tune_TSM , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_TSM )
+
+# Find optimal parameters for Elastic Net
+elastic_net_tune_TSM  <- tune_grid(
+  elastic_net_wflow_TSM ,
+  resamples = TSM_folds,
+  grid = elastic_net_grid
+)
+elastic_net_final_wflow_TSM  <- select_best(elastic_net_tune_TSM , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_TSM )
+
+# Find optimal parameters for k-Nearest Neighbors
+knn_tune_TSM  <- tune_grid(
+    knn_wflow_TSM ,
+    resamples = TSM_folds,
+    grid = knn_grid
+)
+knn_final_wflow_TSM  <- select_best(knn_tune_TSM , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_TSM )
 ```
 
 ### Model Fitting
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Fits
+lm_fit_AMD  <- fit(lm_wflow_AMD, AMD_train)
+ 
+# Ridge Regression Fits
+ridge_fit_AMD  <- fit(ridge_final_wflow_AMD , AMD_train)
+ 
+# Lasso Regression Fits
+lasso_fit_AMD  <- fit(lasso_final_wflow_AMD , AMD_train)
+
+# Elastic Net Fits
+elastic_net_fit_AMD <- fit(elastic_net_final_wflow_AMD , AMD_train)
+ 
+# k-Nearest Neighbors Fit
+knn_fit_AMD  <- fit(knn_final_wflow_AMD , AMD_train)
+```
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Fits
-lm_fit  <- fit(lm_wflow, AMD_train)
+lm_fit_NVDA  <- fit(lm_wflow_NVDA, NVDA_train)
  
 # Ridge Regression Fits
-ridge_fit  <- fit(ridge_final_wflow , AMD_train)
+ridge_fit_NVDA  <- fit(ridge_final_wflow_NVDA , NVDA_train)
  
 # Lasso Regression Fits
-lasso_fit  <- fit(lasso_final_wflow , AMD_train)
+lasso_fit_NVDA  <- fit(lasso_final_wflow_NVDA , NVDA_train)
 
 # Elastic Net Fits
-elastic_net_fit <- fit(elastic_net_final_wflow , AMD_train)
+elastic_net_fit_NVDA <- fit(elastic_net_final_wflow_NVDA , NVDA_train)
  
 # k-Nearest Neighbors Fit
-knn_fit  <- fit(knn_final_wflow , AMD_train)
+knn_fit_NVDA  <- fit(knn_final_wflow_NVDA , NVDA_train)
 ```
 
-### Model Results for predicting 1-Week Average of NVIDIA Stock Price
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Fits
+lm_fit_INTC  <- fit(lm_wflow_INTC, INTC_train)
+ 
+# Ridge Regression Fits
+ridge_fit_INTC  <- fit(ridge_final_wflow_INTC , INTC_train)
+ 
+# Lasso Regression Fits
+lasso_fit_INTC  <- fit(lasso_final_wflow_INTC , INTC_train)
+
+# Elastic Net Fits
+elastic_net_fit_INTC <- fit(elastic_net_final_wflow_INTC , INTC_train)
+ 
+# k-Nearest Neighbors Fit
+knn_fit_INTC  <- fit(knn_final_wflow_INTC , INTC_train)
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Fits
+lm_fit_TSM  <- fit(lm_wflow_TSM, TSM_train)
+ 
+# Ridge Regression Fits
+ridge_fit_TSM  <- fit(ridge_final_wflow_TSM , TSM_train)
+ 
+# Lasso Regression Fits
+lasso_fit_TSM  <- fit(lasso_final_wflow_TSM , TSM_train)
+
+# Elastic Net Fits
+elastic_net_fit_TSM <- fit(elastic_net_final_wflow_TSM , TSM_train)
+ 
+# k-Nearest Neighbors Fit
+knn_fit_TSM  <- fit(knn_final_wflow_TSM , TSM_train)
+```
+
+### Model Results
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 # Linear Regression Training
-lm_train_res  <- predict(lm_fit , new_data = AMD_train %>% select(-AMD.Close))
-lm_train_res  <- bind_cols(lm_train_res , AMD_train %>% select(AMD.Close))
+lm_train_res_AMD  <- predict(lm_fit_AMD , new_data = AMD_train %>% select(-AMD.Close))
+lm_train_res_AMD  <- bind_cols(lm_train_res_AMD , AMD_train %>% select(AMD.Close))
  
 # Ridge Regression Training
-ridge_train_res  <- predict(ridge_fit , new_data = AMD_train %>% select(-AMD.Close))
-ridge_train_res  <- bind_cols(ridge_train_res , AMD_train %>% select(AMD.Close))
+ridge_train_res_AMD  <- predict(ridge_fit_AMD , new_data = AMD_train %>% select(-AMD.Close))
+ridge_train_res_AMD  <- bind_cols(ridge_train_res_AMD , AMD_train %>% select(AMD.Close))
  
 # Lasso Regression Training
-lasso_train_res  <- predict(lasso_fit , new_data =  AMD_train  %>% select(-AMD.Close))
-lasso_train_res  <- bind_cols(lasso_train_res ,  AMD_train  %>% select(AMD.Close))
+lasso_train_res_AMD  <- predict(lasso_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close))
+lasso_train_res_AMD  <- bind_cols(lasso_train_res_AMD ,  AMD_train  %>% select(AMD.Close))
 
 # Elastic Net Training
-elastic_net_train_res  <- predict(elastic_net_fit , new_data =  AMD_train  %>% select(-AMD.Close ))
-elastic_net_train_res  <- bind_cols(elastic_net_train_res ,  AMD_train  %>% select(AMD.Close ))
+elastic_net_train_res_AMD  <- predict(elastic_net_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close ))
+elastic_net_train_res_AMD  <- bind_cols(elastic_net_train_res_AMD ,  AMD_train  %>% select(AMD.Close ))
 
 # k-Nearest Neighbors Training
-knn_train_res  <- predict(knn_fit , new_data =  AMD_train  %>% select(-AMD.Close ))
-knn_train_res  <- bind_cols(knn_train_res ,  AMD_train  %>% select(AMD.Close ))
+knn_train_res_AMD  <- predict(knn_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close ))
+knn_train_res_AMD  <- bind_cols(knn_train_res_AMD ,  AMD_train  %>% select(AMD.Close ))
 ```
 
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Training
+lm_train_res_NVDA  <- predict(lm_fit_NVDA , new_data = NVDA_train %>% select(-NVDA.Close))
+lm_train_res_NVDA  <- bind_cols(lm_train_res_NVDA , NVDA_train %>% select(NVDA.Close))
+ 
+# Ridge Regression Training
+ridge_train_res_NVDA  <- predict(ridge_fit_NVDA , new_data = NVDA_train %>% select(-NVDA.Close))
+ridge_train_res_NVDA  <- bind_cols(ridge_train_res_NVDA , NVDA_train %>% select(NVDA.Close))
+ 
+# Lasso Regression Training
+lasso_train_res_NVDA  <- predict(lasso_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close))
+lasso_train_res_NVDA  <- bind_cols(lasso_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close))
+
+# Elastic Net Training
+elastic_net_train_res_NVDA  <- predict(elastic_net_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close ))
+elastic_net_train_res_NVDA  <- bind_cols(elastic_net_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close ))
+
+# k-Nearest Neighbors Training
+knn_train_res_NVDA  <- predict(knn_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close ))
+knn_train_res_NVDA  <- bind_cols(knn_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close ))
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Training
+lm_train_res_INTC  <- predict(lm_fit_INTC , new_data = INTC_train %>% select(-INTC.Close))
+lm_train_res_INTC  <- bind_cols(lm_train_res_INTC , INTC_train %>% select(INTC.Close))
+ 
+# Ridge Regression Training
+ridge_train_res_INTC  <- predict(ridge_fit_INTC , new_data = INTC_train %>% select(-INTC.Close))
+ridge_train_res_INTC  <- bind_cols(ridge_train_res_INTC , INTC_train %>% select(INTC.Close))
+ 
+# Lasso Regression Training
+lasso_train_res_INTC  <- predict(lasso_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close))
+lasso_train_res_INTC  <- bind_cols(lasso_train_res_INTC ,  INTC_train  %>% select(INTC.Close))
+
+# Elastic Net Training
+elastic_net_train_res_INTC  <- predict(elastic_net_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close ))
+elastic_net_train_res_INTC  <- bind_cols(elastic_net_train_res_INTC ,  INTC_train  %>% select(INTC.Close ))
+
+# k-Nearest Neighbors Training
+knn_train_res_INTC  <- predict(knn_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close ))
+knn_train_res_INTC  <- bind_cols(knn_train_res_INTC ,  INTC_train  %>% select(INTC.Close ))
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Linear Regression Training
+lm_train_res_TSM  <- predict(lm_fit_TSM , new_data = TSM_train %>% select(-TSM.Close))
+lm_train_res_TSM  <- bind_cols(lm_train_res_TSM , TSM_train %>% select(TSM.Close))
+ 
+# Ridge Regression Training
+ridge_train_res_TSM  <- predict(ridge_fit_TSM , new_data = TSM_train %>% select(-TSM.Close))
+ridge_train_res_TSM  <- bind_cols(ridge_train_res_TSM , TSM_train %>% select(TSM.Close))
+ 
+# Lasso Regression Training
+lasso_train_res_TSM  <- predict(lasso_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close))
+lasso_train_res_TSM  <- bind_cols(lasso_train_res_TSM ,  TSM_train  %>% select(TSM.Close))
+
+# Elastic Net Training
+elastic_net_train_res_TSM  <- predict(elastic_net_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close ))
+elastic_net_train_res_TSM  <- bind_cols(elastic_net_train_res_TSM ,  TSM_train  %>% select(TSM.Close ))
+
+# k-Nearest Neighbors Training
+knn_train_res_TSM  <- predict(knn_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close ))
+knn_train_res_TSM  <- bind_cols(knn_train_res_TSM ,  TSM_train  %>% select(TSM.Close ))
+```
 
 ## Model Accuracies
 
-
 Root Mean Square Error (RMSE) results:
+
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
-                    (ridge_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
-                    (lasso_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
-                    (elastic_net_train_res  %>% rmse( AMD.Close, .pred))$.estimate,
-                    (knn_train_res  %>% rmse( AMD.Close, .pred))$.estimate ) 
+       AMD = c((lm_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (ridge_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (lasso_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (elastic_net_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (knn_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate ),
+       NVDA = c((lm_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (ridge_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (lasso_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (elastic_net_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (knn_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate ),
+       INTC = c((lm_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (ridge_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (lasso_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (elastic_net_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (knn_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate ),
+       TSM = c((lm_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (ridge_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (lasso_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (elastic_net_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (knn_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate )
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
   scroll_box(width = "100%", height = "200px")
 ```
 
+R\^2 results:
 
-R^2 results:
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       One_Week = c((lm_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
-                    (ridge_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
-                    (lasso_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
-                    (elastic_net_train_res  %>% rsq( AMD.Close, .pred))$.estimate,
-                    (knn_train_res  %>% rsq( AMD.Close, .pred))$.estimate ) 
+       AMD = c((lm_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (ridge_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (lasso_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (elastic_net_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (knn_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate ),
+       NVDA = c((lm_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (ridge_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (lasso_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (elastic_net_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (knn_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate ),
+       INTC = c((lm_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (ridge_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (lasso_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (elastic_net_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (knn_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate ),
+       TSM = c((lm_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (ridge_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (lasso_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (elastic_net_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (knn_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate )
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
