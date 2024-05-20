@@ -43,11 +43,11 @@ conflicted::conflicts_prefer(dplyr::lag)
 set.seed(3435)
 ```
 
-One of the most useful packages for the analysis of stock market data in R is the `quantmod` package. While there are several built-in functions and tools which predict stock market trends using statistical learning, we will simply use this package for the purpose of pulling live stock data from  [Yahoo Finance](https://finance.yahoo.com/) and visualizing the data in a much neater fashion than usual `ggplot2` (in addition, using built-in statistical learning methods in a statistical learning project is somewhat poor form). 
+One of the most useful packages for the analysis of stock market data in R is the `quantmod` package. While there are several built-in functions and tools which predict stock market trends using statistical learning, we will simply use this package for the purpose of pulling live stock data from  [Yahoo Finance](https://finance.yahoo.com/) and visualizing the data in a much neater fashion than usual `ggplot2` (as using built-in statistical learning methods in a statistical learning project is somewhat poor form). 
 
-In particular, the `quantmod` package  allows us to circumvent the process of downloading a CSV file of stock market data from the internet and read it into R by using the `loadSymbols` method, which then automatically loads all stock data (over a potentially specified interval) into a table assigned the same name as the stock's symbol. Since the function `loadSymbols` will automatically set the most recent day to pull stock data as the current day, we must specify a "last day" to pull our stock data to ensure that our models run the same every day; thus, we will pull __one fiscal year's worth of stock data__ ranging over all of 2023. It should also be noted that the table loaded by `loadSymbols` is __not__ a data-frame; its original datatype must be used to aesthetically plot all the stock information via `chartSeries`, but we will later need to typecast this object to a usual data-frame in order to apply most of the `tidyverse` functions.
+In particular, the `quantmod` package  allows us to circumvent the process of downloading a CSV file of stock market data from the internet and read it into R by instead using the `loadSymbols` method, which then automatically loads all stock data (over a potentially specified interval) into a table assigned the same name as the stock's symbol. Since the function `loadSymbols` will automatically set the most recent day to pull stock data as the current day, we must specify a "last day" to pull our stock data to ensure that our models run the same every day; thus, we will pull __one fiscal year's worth of stock data__ ranging from January $1^{\text{st}}$, 2023 to January $1^{\text{st}}$, 2024. It is worth noting that the table loaded by `loadSymbols` is __not__ a data-frame; its original datatype must be used for other functions in the `quantmod` package such as the `chartSeries` plots applied below, but we will later need to typecast this object to a usual data-frame in order to apply most of the `tidyverse` functions.
 
-Below are formatted plots of the market data pulled for our four stocks: AMD, NVDA, INTC, and TSM. We will postpone the discussion of what several variables mean until the Exploratory Data Analysis section below.
+Below are formatted plots of the market data for our four stocks (AMD, NVDA, INTC, and TSM) obtained using the `chartSeries` function. We will postpone the discussion of what several terms mean until the Exploratory Data Analysis section.
 
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE}
@@ -79,13 +79,13 @@ TSM <- data.frame(TSM)
 TSM$TSM.Date <- my_dates
 ```
 
-With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks, we need only examine one of our four symbols since all predictors are the same:
+With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks, it suffices to check the dimensions of only one of our data frames:
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE}
 dim(AMD)
 ```
 
-One may be initially misled by the fact that only 250 observations appear across a years worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a hanful of holidays.  In addition, a quick analysis shows that there is no missing data among any of the four stocks; however, this is somewhat expected since stock market data is meant to be as publicly available as possible and the original features are fairly common metrics for financial institutions to collect.
+One may be initially misled by the fact that only 250 observations appear across a years worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a hanful of holidays.  In addition, a quick analysis shows that there is no missing data among any of the four stocks; this is somewhat expected since stock market data is meant to be as publicly available as possible and the original features are fairly common metrics for financial institutions to collect.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 vis_miss(AMD)
@@ -111,7 +111,7 @@ In the first half of this section, we first examine the initial predictors loade
 *   `Adjusted`: The closing price of the stock that day together with any adjustments due to corporate actions such as rights offerings, dividends, and splits.
 
 
-The `dygraph` package loaded in the section provides a compact and convenient way for us to measure _most_ of the above predictors simultaneously for each stock:
+The `dygraph` package loaded in the previous section provides a compact and convenient way for us to measure several of the above predictors simultaneously for each stock:
 
 ```{r include = TRUE, warning = FALSE, message = FALSE }
 p <- dygraph(AMD[,c(1:4)], xlab = "Date", ylab = "Price", main = "AMD Price") %>%
@@ -171,13 +171,18 @@ p
 
 ## Added Predictors and Metrics
 
-While the six predictors pulled from Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess and predict the future growth of our securities. For example, since all additional predictors introduced rely on the analysis of recent data, the most important concept to first introduct is that of a _lag variable_.
+While the six predictors pulled from Yahoo Finance give significant insight into each stock's historical performance over the year, there may be other, more useful metrics that we can use to assess the future growth of our securities. For example, we are attempting to predict data which relies on it's past/recent behavior; however, all of the variables in our data frame are synchronized to measure the same 24-hour window. This issue naturally leads to the study of _time series_ in statistics, which will ultimately motivate several of the variables we introduce. There are, however, other metrics we will introduce that are much more specific to the study of stock market data and not time series as a whole.
 
 ### Lag Values
 
-Given a time series problem specified by events and observations $\{(t_1, y_1), \dots, (t_n, y_n) \}$, the value of $y_n$ in some way depends on the values of $y_{n-1}, \dots, y_1$. 
+As mentioned above, the analysis of stock market data is a problem which falls into the branch of statistics known as time-series. Ultimately, the study of time-series is a vast and rich topic that we cannot hope to even begin covering within the scope of this project; however, we will attempt to provide a rudimentary explanation of the necessary topics for the sake of completeness.
+
+Foremost, a time series is a collection of data points $\{ X_t : t \in T \}$ gathered over some time domain $T \subseteq [0, \infty)$ and ordered chronologically; while it is not necessarily intrinsic of general time series, many examples have the property that the value of a given data point $X_{t_0}$ depends on previous historical data $\{ X_t : t < t_0 \}$. For these types of examples, whenever we are given sample of data points  $\{ X_1, X_2, \dots, X_n \}$ ordered chronologically we refer to $X_{i-1}, X_{i-2}, \dots, X_{i-p}$ as the _lag variables_ associated to $X_i$. Conveniently, this allows us to model $X_i$ as a function of its lag variables; for example, _autoregression_ is simply the study of regression techniques applied to the lag variables (and potentially other predictors) of a time-series. 
+
+As many of the computations in R are done via vector operations (i.e. on the columns of a data frame), defining a lag variable is effectively synonymous to shifting the values in a given vector "down". While this would likely require some sort of `for`-loop operation in other languages, R provides the useful `lag` method to do exactly this. However, there is one shortcoming that arises regardless of the language used: how do we define the lag variable for the first observation? In R, since we are shifting a given vector down by $p$ entries, the first $p-1$ entries of the lag variable are filled in with `NA` which can ultimately cause some issues for numerical computations later down the road. One common fix for this is to simply pretend the model was constant prior to the first observation, and define the lag variables $X_{1 - p} = X_1$ — this can be done in R using the `fill` command. It should be noted that assuming the model is constant prior to the first observation is a fairly rudimentary solution, and there are more advanced techniques which may give better accuracy. 
 
 ```{r include = TRUE, warning = FALSE, message = FALSE }
+# Define lag variables for AMD
 AMD$AMD.Close_L1 <- lag(AMD$AMD.Close, 1)
 AMD$AMD.Close_L2 <- lag(AMD$AMD.Close, 2)
 AMD$AMD.Close_L3 <- lag(AMD$AMD.Close, 3)
@@ -188,9 +193,7 @@ AMD$AMD.Close_L7 <- lag(AMD$AMD.Close, 7)
 AMD$AMD.Close_L8 <- lag(AMD$AMD.Close, 8)
 AMD$AMD.Close_L9 <- lag(AMD$AMD.Close, 9)
 AMD$AMD.Close_L10 <- lag(AMD$AMD.Close, 10)
-
-
-
+# Fill in NA entries in beginning of lag variables
 AMD <- AMD %>%
   fill(AMD.Close_L1, .direction = "up") %>%
   fill(AMD.Close_L2, .direction = "up") %>%
@@ -203,9 +206,7 @@ AMD <- AMD %>%
   fill(AMD.Close_L9, .direction = "up") %>% 
   fill(AMD.Close_L10, .direction = "up") 
 
-```
-
-```{r include = TRUE, warning = FALSE, message = FALSE }
+# Define lag variables for NVDA
 NVDA$NVDA.Close_L1 <- lag(NVDA$NVDA.Close, 1)
 NVDA$NVDA.Close_L2 <- lag(NVDA$NVDA.Close, 2)
 NVDA$NVDA.Close_L3 <- lag(NVDA$NVDA.Close, 3)
@@ -216,9 +217,7 @@ NVDA$NVDA.Close_L7 <- lag(NVDA$NVDA.Close, 7)
 NVDA$NVDA.Close_L8 <- lag(NVDA$NVDA.Close, 8)
 NVDA$NVDA.Close_L9 <- lag(NVDA$NVDA.Close, 9)
 NVDA$NVDA.Close_L10 <- lag(NVDA$NVDA.Close, 10)
-
-
-
+# Fill in NA entries
 NVDA <- NVDA %>%
   fill(NVDA.Close_L1, .direction = "up") %>%
   fill(NVDA.Close_L2, .direction = "up") %>%
@@ -230,9 +229,8 @@ NVDA <- NVDA %>%
   fill(NVDA.Close_L8, .direction = "up") %>% 
   fill(NVDA.Close_L9, .direction = "up") %>% 
   fill(NVDA.Close_L10, .direction = "up")
-```
 
-```{r include = TRUE, warning = FALSE, message = FALSE }
+# Define lag variables for INTC
 INTC$INTC.Close_L1 <- lag(INTC$INTC.Close, 1)
 INTC$INTC.Close_L2 <- lag(INTC$INTC.Close, 2)
 INTC$INTC.Close_L3 <- lag(INTC$INTC.Close, 3)
@@ -243,9 +241,7 @@ INTC$INTC.Close_L7 <- lag(INTC$INTC.Close, 7)
 INTC$INTC.Close_L8 <- lag(INTC$INTC.Close, 8)
 INTC$INTC.Close_L9 <- lag(INTC$INTC.Close, 9)
 INTC$INTC.Close_L10 <- lag(INTC$INTC.Close, 10)
-
-
-
+# Fill in NA entries
 INTC <- INTC %>%
   fill(INTC.Close_L1, .direction = "up") %>%
   fill(INTC.Close_L2, .direction = "up") %>%
@@ -257,9 +253,8 @@ INTC <- INTC %>%
   fill(INTC.Close_L8, .direction = "up") %>% 
   fill(INTC.Close_L9, .direction = "up") %>% 
   fill(INTC.Close_L10, .direction = "up") 
-```
 
-```{r include = TRUE, warning = FALSE, message = FALSE }
+# Define lag variables for TSM
 TSM$TSM.Close_L1 <- lag(TSM$TSM.Close, 1)
 TSM$TSM.Close_L2 <- lag(TSM$TSM.Close, 2)
 TSM$TSM.Close_L3 <- lag(TSM$TSM.Close, 3)
@@ -270,8 +265,7 @@ TSM$TSM.Close_L7 <- lag(TSM$TSM.Close, 7)
 TSM$TSM.Close_L8 <- lag(TSM$TSM.Close, 8)
 TSM$TSM.Close_L9 <- lag(TSM$TSM.Close, 9)
 TSM$TSM.Close_L10 <- lag(TSM$TSM.Close, 10)
-
-
+# Fill in NA entries
 TSM <- TSM %>%
   fill(TSM.Close_L1, .direction = "up") %>%
   fill(TSM.Close_L2, .direction = "up") %>%
@@ -285,13 +279,15 @@ TSM <- TSM %>%
   fill(TSM.Close_L10, .direction = "up") 
 ```
 
+Any time one is utilizing lag variables in a time series problem, a natural question which arises is "how far back should we look to measure current data"? In other words, what is the optimal lag length $p$ for a given time series. It turns out this an incredibly involved problem that does not have a single universal answer for all time-series based questions; there are several advanced techniques guided by economic theory for auto-regressive models such as the F-test approach and Bayes information criterion (BIC) / Akaike information criterion (AIC) that are often used, but we will unfortunately omit any discussion of these techniques since the focus of this project is on the statistical learning models themselves. Instead, we will naively take the lag length to be two weeks (i.e. 10 business days) which is fairly short for economic time series problems measured on a daily scale.
+
 ### Simple Moving Average of Closing Price
 
-As consumers use historical stock data to determine whether a certain stock is worth buying or not, it becomes apparent that stocks' price is, in one way or another, dependent on its previous value. While this is technically true for any continuous function / continuous random variable, it is clear that even long-term data can affect a stock's current value — for example, if a stock has been in a steady downward trend for quite some time, it will negatively affect the perception of potential investors.
-
-While there are multiple financial metrics which account for previous stock prices, this analysis will only look at two basic measurements: the simple moving average and the simple moving standard deviation (where n is some integer-valued hyper-parameter). Although there are subtle differences between the opening price and the closing price of a stock, the larger the moving value is (i.e. the number of days averaged over) the less the distinction should matter in terms of which variable to average; for consistency, we will simply base our new metrics on the closing costs of each stock.
-
-Additionally, there is no clear choice for how much previous data to account for — should the analysis look back at a single week's worth of data or a month? As this is itself an interesting question for the sake of tuning our models, **we will consider this an added hyperparameter for the problem** and consider four possible values: 1 week, 2 weeks, 1 month, and 2 months.
+One issue that immediately arises after defining lag variables is that they are almost always highly correlated with one another. Ultimately this makes sense, as they are in fact measuring the same continuous observable; however, adding lag variables often results in a significant amount of multicollinearity within our model. One way to eliminate this issue is to instead measure the average of our lag variables across a __potentially different lag length__, known as the _simple moving average (SMA)_. Specifically, we define
+$$
+\operatorname{SMA}(X_i, k) = \frac{1}{k}\sum_{j=0}^{k-1}X_{i-j}
+$$
+(notice this is inclusive of the current data point, but we could alternatively define the simple moving average to run over $1 \leq j \leq k$ to specifically account for prior data). 
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
 
@@ -339,29 +335,32 @@ simple_moving_average <- function(my_vec, lag_period) {
   }
   return(output_vec)
 }
-  
+
+# Obtain four simple moving averages of AMD
 AMD$AMD.SMA_cl_1W <- simple_moving_average(AMD$AMD.Close, 5)
 AMD$AMD.SMA_cl_2W <- simple_moving_average(AMD$AMD.Close, 10)
 AMD$AMD.SMA_cl_1M <- simple_moving_average(AMD$AMD.Close, 20)
 AMD$AMD.SMA_cl_2M <- simple_moving_average(AMD$AMD.Close, 40)
 
-
+# Obtain four simple moving averages of NVDA
 NVDA$NVDA.SMA_cl_1W <- simple_moving_average(NVDA$NVDA.Close, 5)
 NVDA$NVDA.SMA_cl_2W <- simple_moving_average(NVDA$NVDA.Close, 10)
 NVDA$NVDA.SMA_cl_1M <- simple_moving_average(NVDA$NVDA.Close, 20)
 NVDA$NVDA.SMA_cl_2M <- simple_moving_average(NVDA$NVDA.Close, 40)
 
+# Obtain four simple moving averages of INTC
 INTC$INTC.SMA_cl_1W <- simple_moving_average(INTC$INTC.Close, 5)
 INTC$INTC.SMA_cl_2W <- simple_moving_average(INTC$INTC.Close, 10)
 INTC$INTC.SMA_cl_1M <- simple_moving_average(INTC$INTC.Close, 20)
 INTC$INTC.SMA_cl_2M <- simple_moving_average(INTC$INTC.Close, 40)
 
+# Obtain four simple moving averages of TSM
 TSM$TSM.SMA_cl_1W <- simple_moving_average(TSM$TSM.Close, 5)
 TSM$TSM.SMA_cl_2W <- simple_moving_average(TSM$TSM.Close, 10)
 TSM$TSM.SMA_cl_1M <- simple_moving_average(TSM$TSM.Close, 20)
 TSM$TSM.SMA_cl_2M <- simple_moving_average(TSM$TSM.Close, 40)
 
-
+# Plot the simple moving averages for each stock
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.SMA_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.SMA_cl_2W, color = '2-Week')) +
@@ -431,9 +430,18 @@ ggplot(data = TSM, aes(x=TSM.Date)) +
   theme_dark()
 ```
 
-One characteristic that immediately becomes apparent is that evaluating the running averages instead of the closing costs seems to "smooth out" the curves — in other words, the running average is much more stable and is not affected by a share's volatility as much as our original predictors obtained from the CSV. In fact, what we are actually doing is slowly interpolating the data with the overall average; since the overall average is a constant function (and thus linear), the "smoothing out" process is simply a result of interpolating with a $C^\infty(\mathbb{R})$ (smooth) function.
+One characteristic that immediately becomes apparent is that evaluating the simple moving averages instead of the closing costs seems to "smooth out" the curves — in other words, the simple moving average average is much more stable and is not affected by a share's volatility as much as our original predictors. Mathematically, this is simply a consequence of the fact that we are slowly interpolating the data with the overall average; since the overall average is a constant function (and thus infinitely differentiable), the "smoothing out" process really just us interpolating with a   $C^\infty(\mathbb{R})$ function.
+
+Taking different values for the "lag period" of the simple moving average also has several benefits. Since the simple moving average measures the trends of a stock over that lag period, the simple moving average taken over 2 months (i.e. roughly 40 business days) measures long term behavior much more accurately than the simply moving average taken over 2 weeks (i.e. roughly 10 business days) , which would be a much better measure of short term trends. In fact, two SMA curves crossing tends to be a common trading signal for investors — when a short-period SMA curve crosses _below_ a long-period SMA curve, this indicates the recent behavior of the stock is performing worse than its long term trends, meaning an investor would want to short the stock (i.e. invest based on the assumption the value of the stock will decrease). Similarly, when a short-period SMA curve crosses _above_ a long-period SMA curve, this should indicate to investors that the stock is performing better than usual and thus it is a good idea to go long (i.e. purchase the stock ).
 
 ### Exponential Moving Average
+
+While the simple moving average (SMA) above can be incredibly useful to de-correlate the lag variables and measure the trends and behaviors of a given security, it can fall short in one particular way: it gives equal weight to events that happened at the beginning of the lag period as it does to events that happened at the end of the lag period. This is generally not the case with time series problems, as the relevancy of data points tends to decay non-linearly over time. A better model would be to weight recent events more heavily than events further in the past, and then take the average of these $\text{values} \times \text{weights}$ — this is precisely the idea behind the _exponential moving average_. Specifically, we fix some _smoothing factor_ $\beta > 0$ define our weight to be $w = \beta\, /\, (n+1)$ and the exponential moving average as
+$$
+\operatorname{EMA}(X_i, n) = w \cdot X_{i}\ +\ (1-w) \cdot\operatorname{EMA}(X_{i-1}, n)
+$$
+where $n$ is the number of days in our lag period. Its common in finance to take $\beta = 2$, which is precisely the value we will take for the purpose of this project.
+
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE , fig.show="hold", out.width="50%"}
 exponential_moving_average_helper <- function(my_vec, lag_period, smoothing_factor) {
@@ -524,27 +532,28 @@ exponential_moving_average <- function(my_vec, lag_period) {
   return(output_vec)
 }
 
-
+# Compute Exponential moving average for AMD
 AMD$AMD.EMA_cl_1W <- exponential_moving_average(AMD$AMD.Close, 5)
 AMD$AMD.EMA_cl_2W <- exponential_moving_average(AMD$AMD.Close, 10)
 AMD$AMD.EMA_cl_1M <- exponential_moving_average(AMD$AMD.Close, 20)
 AMD$AMD.EMA_cl_2M <- exponential_moving_average(AMD$AMD.Close, 40)
-
+# Compute Exponential moving average for NVDA
 NVDA$NVDA.EMA_cl_1W <- exponential_moving_average(NVDA$NVDA.Close, 5)
 NVDA$NVDA.EMA_cl_2W <- exponential_moving_average(NVDA$NVDA.Close, 10)
 NVDA$NVDA.EMA_cl_1M <- exponential_moving_average(NVDA$NVDA.Close, 20)
 NVDA$NVDA.EMA_cl_2M <- exponential_moving_average(NVDA$NVDA.Close, 40)
-
+# Compute Exponential moving average for INTC
 INTC$INTC.EMA_cl_1W <- exponential_moving_average(INTC$INTC.Close, 5)
 INTC$INTC.EMA_cl_2W <- exponential_moving_average(INTC$INTC.Close, 10)
 INTC$INTC.EMA_cl_1M <- exponential_moving_average(INTC$INTC.Close, 20)
 INTC$INTC.EMA_cl_2M <- exponential_moving_average(INTC$INTC.Close, 40)
-
+# Compute Exponential moving average for TSM
 TSM$TSM.EMA_cl_1W <- exponential_moving_average(TSM$TSM.Close, 5)
 TSM$TSM.EMA_cl_2W <- exponential_moving_average(TSM$TSM.Close, 10)
 TSM$TSM.EMA_cl_1M <- exponential_moving_average(TSM$TSM.Close, 20)
 TSM$TSM.EMA_cl_2M <- exponential_moving_average(TSM$TSM.Close, 40)
 
+# Plot the exponential moving average for each stock
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.EMA_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.EMA_cl_2W, color = '2-Week')) +
@@ -614,9 +623,16 @@ ggplot(data = TSM, aes(x=TSM.Date)) +
   theme_dark()
 ```
 
+While the plots of the simple moving average and exponential average look very similar to one another, one notable difference is that the exponential average does not "smooth out" the curve as much — this is simply due to the fact that any recent volatility affects the exponential moving average much more than the simple moving average, since volatility in recent events is weighed more heavily.
+
 ### Simple Moving Deviation of Closing Price
 
-With a concrete notion of the simple moving average closing price of a stock, it is natural to measure the standard deviation as well to gain an accurate insight on the volatility of each stock.
+With a concrete notion of the simple moving average as the mean taken over our lag variables, a natural extension is to also measure the standard deviation of our lag variables as well to gain an accurate insight on the volatility of our time series. In fact, the simple moving deviation has a very particular name in terms of stock prices: __Bollinger Bands__. In the very first graphs plotted at the beginning of this analysis (in the _Loading Packages and Data_ chapter) using the `chartSeries` command, the gray-dotted lines running through the stock values is simply the 20-day SMA, and the red-dotted lines above and below the stock values are the 20-day simple moving deviation (which are referred to in the chart as the Bollinger bands). For the sake of completeness, the simple moving deviation can be calculated as
+$$
+\operatorname{SMD}(X_i, n) = \sqrt{ \frac{\sum_{j=0}^{n-1} (X_{i-j} - \operatorname{SMA}(X_i, n))^2}{n-1} }
+$$
+As with the simple moving average, we could alternatively consider the variation where the current data point is not accounted for in the simple moving deviation by instead ranging $1 \leq j \leq n$.
+
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%" }
 simple_moving_deviation <- function(my_vec, lag_period) {
@@ -669,28 +685,28 @@ simple_moving_deviation <- function(my_vec, lag_period) {
   }
   return(output_vec)
 }
-
-
+# Compute the simple moving deviation of AMD
 AMD$AMD.SMD_cl_1W <- simple_moving_deviation(AMD$AMD.Close, 5)
 AMD$AMD.SMD_cl_2W <- simple_moving_deviation(AMD$AMD.Close, 10)
 AMD$AMD.SMD_cl_1M <- simple_moving_deviation(AMD$AMD.Close, 20)
 AMD$AMD.SMD_cl_2M <- simple_moving_deviation(AMD$AMD.Close, 40)
-
+# Compute the simple moving deviation of NVDA
 NVDA$NVDA.SMD_cl_1W <- simple_moving_deviation(NVDA$NVDA.Close, 5)
 NVDA$NVDA.SMD_cl_2W <- simple_moving_deviation(NVDA$NVDA.Close, 10)
 NVDA$NVDA.SMD_cl_1M <- simple_moving_deviation(NVDA$NVDA.Close, 20)
 NVDA$NVDA.SMD_cl_2M <- simple_moving_deviation(NVDA$NVDA.Close, 40)
-
+# Compute the simple moving deviation of INTC
 INTC$INTC.SMD_cl_1W <- simple_moving_deviation(INTC$INTC.Close, 5)
 INTC$INTC.SMD_cl_2W <- simple_moving_deviation(INTC$INTC.Close, 10)
 INTC$INTC.SMD_cl_1M <- simple_moving_deviation(INTC$INTC.Close, 20)
 INTC$INTC.SMD_cl_2M <- simple_moving_deviation(INTC$INTC.Close, 40)
-
+# Compute the simple moving deviation of TSM
 TSM$TSM.SMD_cl_1W <- simple_moving_deviation(TSM$TSM.Close, 5)
 TSM$TSM.SMD_cl_2W <- simple_moving_deviation(TSM$TSM.Close, 10)
 TSM$TSM.SMD_cl_1M <- simple_moving_deviation(TSM$TSM.Close, 20)
 TSM$TSM.SMD_cl_2M <- simple_moving_deviation(TSM$TSM.Close, 40)
 
+# Plot the simple moving deviation for our four stocks
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.SMD_cl_1W, color = '1-Week')) + 
   geom_line(aes(y = AMD.SMD_cl_2W, color = '2-Week')) +
@@ -760,14 +776,24 @@ ggplot(data = TSM, aes(x=TSM.Date)) +
   theme_dark()
 ```
 
+Ultimately, plotting our simple moving deviation without the relevant simple moving averages is not terribly insightful; as one would expect, there is more variation across longer periods than there is across shorter periods. 
+
 ### Moving Average Convergence Divergence (MACD)
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%" }
+The last metric we wish to consider in this analysis is closely related to the crossing of SMA curves in the subsection above; the _Moving Average Convergence Divergence_ (MACD) is simply a value which indicates the curve crossing of the exponential moving average, as that carries greater information about the recent behavior of the data. In most stock market analysis, it is standard to consider the short-term EMA to be taken over a 2-week period and the long-term EMA to be taken over a 1-month period; thus, we define
+$$
+\operatorname{MACD}(X_i) = \operatorname{EMA}(X_i,\ 10) - \operatorname{EMA}(X_i,\ 20)
+$$
+In the general study of time-series, the MACD is just a particular example of a curve-crossing metric between moving averages used to predict trend changes — any two long-term and short-term periods could be used to define a similar metric. In the graphs below, a curve crossing the horizontal axis acts as a trade signal to investors to either purchase or short the security depending on whether the curve is crossing into the upper half-plane or lower half-plane.
+
+```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
+# Compute the MACD for our 4 stocks
 AMD$AMD.MACD = (AMD$AMD.EMA_cl_2W - AMD$AMD.EMA_cl_1M)
 NVDA$NVDA.MACD = (NVDA$NVDA.EMA_cl_2W - NVDA$NVDA.EMA_cl_1M)
 INTC$INTC.MACD = (INTC$INTC.EMA_cl_2W - INTC$INTC.EMA_cl_1M)
 TSM$TSM.MACD = (TSM$TSM.EMA_cl_2W - TSM$TSM.EMA_cl_1M)
 
+# Plot the MACD line
 ggplot(data = AMD, aes(x=AMD.Date)) +
   geom_line(aes(y = AMD.MACD, color = 'MACD')) +
   ylab('USD') +
@@ -840,7 +866,7 @@ select(TSM, TSM.Close, TSM.Volume, TSM.SMD_cl_1W, TSM.SMD_cl_2W, TSM.SMD_cl_1M, 
 
 # Setting Up Models
 
-With a better picture in mind of how our stock prices can be measured from both the given metrics and how they interact with one another, we can now set up our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular data-set.
+With a better picture in mind of how our stock prices can be measured from both the given metrics, we can now set up our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular data-set.
 
 ### Data Split
 
