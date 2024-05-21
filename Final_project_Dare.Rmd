@@ -37,6 +37,7 @@ library(dygraphs)
 library(tidyr)
 library(ranger)
 library(xgboost)
+library(vip)
 
 
 tidymodels_prefer()
@@ -870,7 +871,7 @@ From the above plots we are able to confirm that there is in fact a correlation 
 
 With a better picture in mind of how our stock prices can be measured from both the given metrics, we can now resample our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular subset. Next, we identify any possible interactions between our variables
 
-### Data Split
+## Data Split
 
 One of the primary ways we ensure robustness of our models is by partitioning our data into training and testing data. Foremost, this ensures that our model does not become overfit to the details and noise of our underlying data-set by introducing a portion of the data which is unseen during the training phase (i.e. the testing data). Ultimately, one would want outcome variable to have similar statistics / variance across both the training and testing sets — this is accomplished by *stratifying* our split about the desired outcome variable.
 
@@ -894,7 +895,7 @@ TSM_test <- testing(TSM_split)
 ```
 
 
-### Recipe Creation
+## Recipe Creation
 
 One of the most important steps in setting up a statistical learning model is telling the model which predictors to include and how to preprocess the data in our training set. Despite the fact that we have a wide range of predictors at our disposal, adding more predictors does not always indicate better performance of our model — for example, we have defined multiple versions of the simple moving average metric for each stock, though they may not all be simultaneously useful. Therefore we wish to judiciously choose the predictors which we will base each of our models off of. 
 
@@ -945,7 +946,7 @@ INTC_folds  <- vfold_cv(INTC_train, v = 10, strata = INTC.Close)
 TSM_folds  <- vfold_cv(TSM_train, v = 10, strata = TSM.Close)
 ```
 
-## Fitting the Models
+## Define Workflows
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1119,8 +1120,7 @@ boosted_trees_wflow_TSM <- workflow() %>%
   add_recipe(TSM_recipe)
 ```
 
-
-### Tuning Hyperparameters
+## Tuning Hyperparameters
 
 Set up Grids:
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
@@ -1147,9 +1147,9 @@ knn_grid <- grid_regular(neighbors(),
 ############################
 # Define Model for Random Forest
 ############################
-random_forest_grid <- grid_regular(mtry(range = c(1, 8)),
+random_forest_grid <- grid_regular(mtry(range = c(1, 14)),
                         trees(range = c(200,700)),
-                        min_n(range = c(2,12)),
+                        min_n(range = c(1,14)),
                         levels = 5)
 
 ############################
@@ -1157,7 +1157,7 @@ random_forest_grid <- grid_regular(mtry(range = c(1, 8)),
 ############################
 boosted_trees_grid <- grid_regular(mtry(range = c(1, 8)), 
                         trees(range = c(200, 700)),
-                        learn_rate(range = c(-5, -1)),
+                        learn_rate(range = c(-5, -0.5)),
                         levels = 5)
 ```
 
@@ -1339,8 +1339,10 @@ save(boosted_trees_tune_INTC, file = "tuned_grids/boosted_trees_tune_INTC.rda")
 save(boosted_trees_tune_TSM, file = "tuned_grids/boosted_trees_tune_TSM.rda")
 ```
  
+With the results of our grid search saved locally (for each model across all four stocks), we are able to visualize how the accuracy of our models changes as we vary the value of our hyper-parameters. 
 
-Model Performance of Hyperparameter Tuning:
+
+
  
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Ridge Regression grids
@@ -1483,7 +1485,7 @@ boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "
   finalize_workflow(x=boosted_trees_wflow_TSM )
 ```
 
-### Model Fitting
+# Performance of Models
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1543,7 +1545,25 @@ boosted_trees_fit_TSM  <- fit(boosted_trees_final_wflow_TSM, TSM_train)
 boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 ```
 
-### Model Results
+
+## Variable Importance
+
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+boosted_trees_fit_AMD %>% extract_fit_parsnip() %>% 
+  vip() 
+
+boosted_trees_fit_NVDA %>% extract_fit_parsnip() %>% 
+  vip() 
+```
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+boosted_trees_fit_INTC %>% extract_fit_parsnip() %>% 
+  vip() 
+
+boosted_trees_fit_TSM %>% extract_fit_parsnip() %>% 
+  vip()
+```
+
+## Training Accuracy
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1631,9 +1651,6 @@ boosted_trees_train_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_
                                 bind_cols(TSM_train  %>% select(TSM.Close ))
 ```
 
-
-## Model Accuracies
-
 Root Mean Square Error (RMSE) results:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
@@ -1667,12 +1684,11 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
                     (random_forest_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
                     (boosted_trees_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate)
        ) %>%
-  kable() %>%
-  kable_styling(full_width = F) %>%
-  scroll_box(width = "100%", height = "360px")
+  kable(caption = "RMSE Performance on Training Data") %>%
+  kable_styling(full_width = F)
 ```
 
-R\^2 results:
+$R^2$ results:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
@@ -1705,7 +1721,75 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
                     (random_forest_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
                     (boosted_trees_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate)
        ) %>%
-  kable() %>%
-  kable_styling(full_width = F) %>%
-  scroll_box(width = "100%", height = "360px")
+  kable(caption="R^2 Performance on Training Data") %>%
+  kable_styling(full_width = F)
 ```
+
+
+## Best Models and Testing Performance
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+############################
+# Use Linear Regression Fit to Predict Testing Data
+############################
+linear_test_res_AMD  <- predict(linear_fit_AMD, new_data = AMD_test %>% select(-AMD.Close)) %>%
+                          bind_cols(AMD_test %>% select(AMD.Close))
+linear_test_res_NVDA  <- predict(linear_fit_NVDA, new_data = NVDA_test %>% select(-NVDA.Close)) %>%
+                          bind_cols(NVDA_test %>% select(NVDA.Close))
+linear_test_res_INTC  <- predict(linear_fit_INTC, new_data = INTC_test %>% select(-INTC.Close)) %>%
+                          bind_cols(INTC_test %>% select(INTC.Close))
+linear_test_res_TSM  <- predict(linear_fit_TSM, new_data = TSM_test %>% select(-TSM.Close)) %>%
+                          bind_cols(TSM_test %>% select(TSM.Close))
+ 
+ 
+
+############################
+# Use Booested Trees Fit to Predict Testing Data
+############################
+boosted_trees_test_res_AMD  <- predict(boosted_trees_fit_AMD , new_data =  AMD_test  %>% select(-AMD.Close )) %>% 
+                                bind_cols(AMD_test  %>% select(AMD.Close ))
+boosted_trees_test_res_NVDA  <- predict(boosted_trees_fit_NVDA , new_data =  NVDA_test  %>% select(-NVDA.Close )) %>% 
+                                bind_cols(NVDA_test  %>% select(NVDA.Close ))
+boosted_trees_test_res_INTC  <- predict(boosted_trees_fit_INTC , new_data =  INTC_test  %>% select(-INTC.Close )) %>% 
+                                bind_cols(INTC_test  %>% select(INTC.Close ))
+boosted_trees_test_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_test  %>% select(-TSM.Close )) %>% 
+                                bind_cols(TSM_test  %>% select(TSM.Close ))
+```
+
+
+Root Mean Square Error (RMSE) results:
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+tibble(Model = c("Linear Regression", "Boosted Trees"),
+       AMD = c((linear_test_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate),
+       NVDA = c((linear_test_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate),
+       INTC = c((linear_test_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate),
+       TSM = c((linear_test_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate)
+       ) %>%
+  kable(caption = "RMSE Performance on Testing Data") %>%
+  kable_styling(full_width = F)
+```
+
+$R^2$ results:
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+tibble(Model = c("Linear Regression", "Boosted Trees"),
+       AMD = c((linear_test_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate),
+       NVDA = c((linear_test_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate),
+       INTC = c((linear_test_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate),
+       TSM = c((linear_test_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (boosted_trees_test_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate)
+       ) %>%
+  kable(caption="R^2 Performance on Testing Data") %>%
+  kable_styling(full_width = F) 
+```
+
+
+
+# Conclusion 
