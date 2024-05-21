@@ -52,7 +52,7 @@ In particular, the `quantmod` package  allows us to circumvent the process of do
 Below are formatted plots of the market data for our four stocks (AMD, NVDA, INTC, and TSM) obtained using the `chartSeries` function. We will postpone the discussion of what several terms mean until the Exploratory Data Analysis section.
 
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
 a<-loadSymbols("AMD", from="2023-01-01", to="2024-01-01")
 chartSeries(AMD,TA=c(addVo(),addBBands(),addMACD()))
 my_dates <- index(AMD)
@@ -60,21 +60,21 @@ AMD <- data.frame(AMD)
 AMD$AMD.Date <- my_dates
 ```
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
 a<-loadSymbols("NVDA", from="2023-01-01", to="2024-01-01")
 chartSeries(NVDA,TA=c(addVo(),addBBands(),addMACD()))
 NVDA <- data.frame(NVDA)
 NVDA$NVDA.Date <- my_dates
 ```
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
 a<-loadSymbols("INTC", from="2023-01-01", to="2024-01-01")
 chartSeries(INTC,TA=c(addVo(),addBBands(),addMACD()))
 INTC <- data.frame(INTC)
 INTC$INTC.Date <- my_dates
 ```
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
 a<-loadSymbols("TSM", from="2023-01-01", to="2024-01-01")
 chartSeries(TSM,TA=c(addVo(),addBBands(),addMACD()))
 TSM <- data.frame(TSM)
@@ -83,13 +83,13 @@ TSM$TSM.Date <- my_dates
 
 With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks, it suffices to check the dimensions of only one of our data frames:
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE}
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
 dim(AMD)
 ```
 
 One may be initially misled by the fact that only 250 observations appear across a years worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a hanful of holidays.  In addition, a quick analysis shows that there is no missing data among any of the four stocks; this is somewhat expected since stock market data is meant to be as publicly available as possible and the original features are fairly common metrics for financial institutions to collect.
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r  eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 vis_miss(AMD)
 vis_miss(NVDA)
 vis_miss(INTC)
@@ -291,7 +291,7 @@ $$
 $$
 (notice this is inclusive of the current data point, but we could alternatively define the simple moving average to run over $1 \leq j \leq k$ to specifically account for prior data). 
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r  eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 
 simple_moving_average <- function(my_vec, lag_period) {
   #' Takes the running average of a column vector
@@ -445,7 +445,7 @@ $$
 where $n$ is the number of days in our lag period. Its common in finance to take $\beta = 2$, which is precisely the value we will take for the purpose of this project.
 
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE , fig.show="hold", out.width="50%"}
+```{r  eval = TRUE, include=TRUE, warning=FALSE , fig.show="hold", out.width="50%"}
 exponential_moving_average_helper <- function(my_vec, lag_period, smoothing_factor) {
   #' Helper function to evaluate the exponential moving average over a fixed period 
   #' using an array buffer
@@ -636,7 +636,7 @@ $$
 As with the simple moving average, we could alternatively consider the variation where the current data point is not accounted for in the simple moving deviation by instead ranging $1 \leq j \leq n$.
 
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%" }
+```{r  eval = TRUE, include=TRUE, warning=FALSE,  fig.show="hold", out.width="50%" }
 simple_moving_deviation <- function(my_vec, lag_period) {
   #' Takes the running standard deviation of a column vector
   #'
@@ -788,7 +788,7 @@ $$
 $$
 In the general study of time-series, the MACD is just a particular example of a curve-crossing metric between moving averages used to predict trend changes — any two long-term and short-term periods could be used to define a similar metric. In the graphs below, a curve crossing the horizontal axis acts as a trade signal to investors to either purchase or short the security depending on whether the curve is crossing into the upper or lower half-plane.
 
-```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
+```{r  eval = TRUE, include=TRUE, warning=FALSE,  fig.show="hold", out.width="50%"}
 # Compute the MACD for our 4 stocks
 AMD$AMD.MACD = (AMD$AMD.EMA_cl_2W - AMD$AMD.EMA_cl_1M)
 NVDA$NVDA.MACD = (NVDA$NVDA.EMA_cl_2W - NVDA$NVDA.EMA_cl_1M)
@@ -874,7 +874,7 @@ With a better picture in mind of how our stock prices can be measured from both 
 
 One of the primary ways we ensure robustness of our models is by partitioning our data into training and testing data. Foremost, this ensures that our model does not become overfit to the details and noise of our underlying data-set by introducing a portion of the data which is unseen during the training phase (i.e. the testing data). Ultimately, one would want outcome variable to have similar statistics / variance across both the training and testing sets — this is accomplished by *stratifying* our split about the desired outcome variable.
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 # Create 70-30 split for AMD data
 AMD_split <- initial_split(AMD, prop = 0.7, strata = AMD.Close)
 AMD_train <- training(AMD_split)
@@ -903,7 +903,7 @@ Despite the high correlation between our lag variables, auto-regression tends to
 Using the `tidymodels` package, we are able to specify which variables are used to predict the outcome and process our data via the `recipe` data structure — though it is effectively the same for each individual stock, we need to repeat this step since the variable names pulled from `loadSymbols` do differ. 
 
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 # Create AMD recipe
 AMD_recipe = recipe(AMD.Close ~ AMD.Close_L1 + AMD.Close_L2 + AMD.Close_L3 + AMD.Close_L4 + AMD.Close_L5 +
                       AMD.Close_L6 + AMD.Close_L7 + AMD.Close_L8 + AMD.Close_L9 + AMD.Close_L10 +
@@ -938,7 +938,7 @@ TSM_recipe = recipe(TSM.Close ~ TSM.Close_L1 + TSM.Close_L2 + TSM.Close_L3 + TSM
 
 As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of _k-fold cross validation_ is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k \geq 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = AMD.Close)
 NVDA_folds  <- vfold_cv(NVDA_train, v = 10, strata = NVDA.Close)
 INTC_folds  <- vfold_cv(INTC_train, v = 10, strata = INTC.Close)
@@ -947,7 +947,7 @@ TSM_folds  <- vfold_cv(TSM_train, v = 10, strata = TSM.Close)
 
 ## Fitting the Models
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Linear Regression
 ############################
@@ -1005,7 +1005,7 @@ boosted_trees_model <- boost_tree(mtry = tune(),
 ```
 
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Set Up Workflows for Linear Regression
 ############################
@@ -1123,7 +1123,7 @@ boosted_trees_wflow_TSM <- workflow() %>%
 ### Tuning Hyperparameters
 
 Set up Grids:
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Grid for Ridge AND Lasso Regression
 ############################
@@ -1147,15 +1147,15 @@ knn_grid <- grid_regular(neighbors(),
 ############################
 # Define Model for Random Forest
 ############################
-random_forest_grid <- grid_regular(mtry(range = c(2, 8)),
-                        trees(range = c(250,500)),
-                        min_n(range = c(10,20)),
+random_forest_grid <- grid_regular(mtry(range = c(1, 8)),
+                        trees(range = c(200,700)),
+                        min_n(range = c(2,12)),
                         levels = 5)
 
 ############################
 # Define Model for Boosted Trees
 ############################
-boosted_trees_grid <- grid_regular(mtry(range = c(2, 8)), 
+boosted_trees_grid <- grid_regular(mtry(range = c(1, 8)), 
                         trees(range = c(200, 700)),
                         learn_rate(range = c(-5, -1)),
                         levels = 5)
@@ -1163,7 +1163,7 @@ boosted_trees_grid <- grid_regular(mtry(range = c(2, 8)),
 
 
 
-```{r eval = FALSE, include=TRUE, warnings=FALSE}
+```{r eval = FALSE, include=TRUE, warning=FALSE}
 ############################
 # Optimize parameters for Ridge Regression
 ############################
@@ -1342,74 +1342,74 @@ save(boosted_trees_tune_TSM, file = "tuned_grids/boosted_trees_tune_TSM.rda")
 
 Model Performance of Hyperparameter Tuning:
  
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Ridge Regression grids
 load("tuned_grids/ridge_tune_AMD.rda")
 load("tuned_grids/ridge_tune_NVDA.rda")
 load("tuned_grids/ridge_tune_INTC.rda")
 load("tuned_grids/ridge_tune_TSM.rda")
 
-autoplot(ridge_tune_AMD) + theme_dark()
-autoplot(ridge_tune_NVDA) + theme_dark()
+autoplot(ridge_tune_AMD) + ggtitle("Ridge Regression AMD") + theme_dark()
+autoplot(ridge_tune_NVDA) + ggtitle("Ridge Regression NVDA") + theme_dark()
 ```
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Lasso Regression grids
 load("tuned_grids/lasso_tune_AMD.rda")
 load("tuned_grids/lasso_tune_NVDA.rda")
 load("tuned_grids/lasso_tune_INTC.rda")
 load("tuned_grids/lasso_tune_TSM.rda")
 
-autoplot(lasso_tune_AMD) + theme_dark()
-autoplot(lasso_tune_NVDA) + theme_dark()
+autoplot(lasso_tune_AMD) + ggtitle("Lasso Regression AMD") + theme_dark()
+autoplot(lasso_tune_NVDA) + ggtitle("Lasso Regression NVDA") + theme_dark()
 ```
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, message=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Elastic Net grids
 load("tuned_grids/elastic_net_tune_AMD.rda")
 load("tuned_grids/elastic_net_tune_NVDA.rda")
 load("tuned_grids/elastic_net_tune_INTC.rda")
 load("tuned_grids/elastic_net_tune_TSM.rda")
 
-autoplot(elastic_net_tune_AMD) + theme_dark()
-autoplot(elastic_net_tune_NVDA) + theme_dark()
+autoplot(elastic_net_tune_AMD) + ggtitle("Elastic Net AMD") + theme_dark()
+autoplot(elastic_net_tune_NVDA) + ggtitle("Elastic Net NVDA") + theme_dark()
 ```
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned k-Nearest Neighbors grids
 load("tuned_grids/knn_tune_AMD.rda")
 load("tuned_grids/knn_tune_NVDA.rda")
 load("tuned_grids/knn_tune_INTC.rda")
 load("tuned_grids/knn_tune_TSM.rda")
 
-autoplot(knn_tune_AMD) + theme_dark()
-autoplot(knn_tune_NVDA) + theme_dark()
+autoplot(knn_tune_AMD) + ggtitle("k-Nearest Neighbors AMD") + theme_dark()
+autoplot(knn_tune_NVDA) + ggtitle("k-Nearest Neighbors NVDA") + theme_dark()
 ```
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned Random Forest grids
 load("tuned_grids/random_forest_tune_AMD.rda")
 load("tuned_grids/random_forest_tune_NVDA.rda")
 load("tuned_grids/random_forest_tune_INTC.rda")
 load("tuned_grids/random_forest_tune_TSM.rda")
 
-autoplot(random_forest_tune_AMD) + theme_dark() + theme(text = element_text(size = 9))
-autoplot(random_forest_tune_NVDA) + theme_dark() + theme(text = element_text(size = 9))
+autoplot(random_forest_tune_AMD) + ggtitle("Random Forest AMD") + theme_dark() + theme(text = element_text(size = 9))
+autoplot(random_forest_tune_NVDA) + ggtitle("Random Forest NVDA") + theme_dark() + theme(text = element_text(size = 9))
 ```
-```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned Boosted Trees grids
 load("tuned_grids/boosted_trees_tune_AMD.rda")
 load("tuned_grids/boosted_trees_tune_NVDA.rda")
 load("tuned_grids/boosted_trees_tune_INTC.rda")
 load("tuned_grids/boosted_trees_tune_TSM.rda")
 
-autoplot(boosted_trees_tune_AMD) + theme_dark() + theme(text = element_text(size = 9))
-autoplot(boosted_trees_tune_NVDA) + theme_dark() + theme(text = element_text(size = 9))
+autoplot(boosted_trees_tune_AMD) + theme_dark() + ggtitle("Boosted Trees AMD") + theme(text = element_text(size = 9))
+autoplot(boosted_trees_tune_NVDA) + theme_dark() + ggtitle("Boosted Trees NVDA") + theme(text = element_text(size = 9))
 ```
 
 
 
 
 Finalize Workflows
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Select best model(s) for Ridge Regression
 ############################
@@ -1485,7 +1485,7 @@ boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "
 
 ### Model Fitting
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Fit model(s) for Linear Regression
 ############################
@@ -1545,7 +1545,7 @@ boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 
 ### Model Results
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Use Linear Regression Fit to Predict Training Data
 ############################
@@ -1636,7 +1636,7 @@ boosted_trees_train_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_
 
 Root Mean Square Error (RMSE) results:
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
        AMD = c((linear_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
@@ -1669,12 +1669,12 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
-  scroll_box(width = "100%", height = "200px")
+  scroll_box(width = "100%", height = "360px")
 ```
 
 R\^2 results:
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
        AMD = c((linear_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
@@ -1707,5 +1707,5 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
-  scroll_box(width = "100%", height = "200px")
+  scroll_box(width = "100%", height = "360px")
 ```
