@@ -7,7 +7,7 @@ output:
     code_folding: hide
     toc: yes
     toc_float:
-      collapsed: no
+      collapsed: true
 date: "2024-05-10"
 ---
 
@@ -35,6 +35,8 @@ library(glmnet)
 library(quantmod)
 library(dygraphs)
 library(tidyr)
+library(ranger)
+library(xgboost)
 
 
 tidymodels_prefer()
@@ -784,7 +786,7 @@ The last metric we wish to consider in this analysis is closely related to the c
 $$
 \operatorname{MACD}(X_i) = \operatorname{EMA}(X_i,\ 10) - \operatorname{EMA}(X_i,\ 20)
 $$
-In the general study of time-series, the MACD is just a particular example of a curve-crossing metric between moving averages used to predict trend changes — any two long-term and short-term periods could be used to define a similar metric. In the graphs below, a curve crossing the horizontal axis acts as a trade signal to investors to either purchase or short the security depending on whether the curve is crossing into the upper half-plane or lower half-plane.
+In the general study of time-series, the MACD is just a particular example of a curve-crossing metric between moving averages used to predict trend changes — any two long-term and short-term periods could be used to define a similar metric. In the graphs below, a curve crossing the horizontal axis acts as a trade signal to investors to either purchase or short the security depending on whether the curve is crossing into the upper or lower half-plane.
 
 ```{r  eval = TRUE, include=TRUE, warnings=FALSE,  fig.show="hold", out.width="50%"}
 # Compute the MACD for our 4 stocks
@@ -841,14 +843,12 @@ ggplot(data = TSM, aes(x=TSM.Date)) +
 
 ## Data Correlation
 
-While having a large array of predictors is in some sense useful for seeing the whole picture of the semiconductor market for the 2023-2024 fiscal year, there is also a potentially significant amount of unnecessary information. As mentioned prior, the behavior of many of our initial predictors coming from the CSV files are very closely related to one another — the closing price one day is directly tied to the opening price of the following day, and if a stock's minimum / Low value is increasing that generally means all 4 other predictors (aside from volume) are increasing as well. In addition, comparing the performance between two stocks is generally going to be heavily correlated due to the fact that they both follow the underlying market's climate.
-
-Ultimately, in order to achieve a good understanding of the correlations between all of our predictors we will need to cross examine several subsets of our predictors to see which predictors are correlated for a single stock, and which predictors are useful for measuring competition between stocks. Dividing our correlation plots into two types, we first examine how the predictors are correlated for a **fixed** stock, and test this underlying trend accross a subset of our stocks (ASML, INTC, NVDA, and NXPI ):
+Before setting up our statistical learning models, it is crucial to understand whether there are any underlying relationships between the initial predictors or the added predictors we have defined in the previous section. Based on our prior discussion, it is natural to expect that our lag variables are all heavily correlated with each other, only slightly decreasing the longer the lag period; in fact, the same should be true of the moving averages as the lag period increases. Since each of our four stocks have the same predictors, we only provide a complete correlation plot for one of the stocks (AMD) to confirm the above hypothesis that the added predictors (aside fom MACD) are heavily correlated with the closing price; for the other three stocks, we simply examine the remaining predictors.
 
 ```{r include = TRUE, warning = FALSE, message = FALSE }
-select(AMD, is.numeric) %>%
+select(TSM, is.numeric) %>%
   cor() %>%
-  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="Correlation Plot")
+  corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, number.cex=0.3, title="Correlation Plot")
 ```
 
 ```{r include = TRUE, warning = FALSE, message = FALSE, fig.show="hold", out.width="33%" }
@@ -863,118 +863,80 @@ select(TSM, TSM.Close, TSM.Volume, TSM.SMD_cl_1W, TSM.SMD_cl_2W, TSM.SMD_cl_1M, 
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="TSM Correlation Plot")
 
 ```
+From the above plots we are able to confirm that there is in fact a correlation between the closing price and each of the lag variables which decreases with the lag period, as expected. In addition, we see that all of our initial variables aside from volume (i.e. Low, High, Open, Close, and Adjusted) are all highly correlated with one another; to an extent, this tells us that  Lastly, we see a somewhat unexpected correlation between the 1-week standard moving deviation of the closing price and the volume of securities sold on a given day for each of the four stocks. 
+
 
 # Setting Up Models
 
-With a better picture in mind of how our stock prices can be measured from both the given metrics, we can now set up our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular data-set.
+With a better picture in mind of how our stock prices can be measured from both the given metrics, we can now resample our data and begin training our models. This will be done in several steps, first preparing the data to ensure that our models do not become over-fitted to a particular subset. Next, we identify any possible interactions between our variables
 
 ### Data Split
 
 One of the primary ways we ensure robustness of our models is by partitioning our data into training and testing data. Foremost, this ensures that our model does not become overfit to the details and noise of our underlying data-set by introducing a portion of the data which is unseen during the training phase (i.e. the testing data). Ultimately, one would want outcome variable to have similar statistics / variance across both the training and testing sets — this is accomplished by *stratifying* our split about the desired outcome variable.
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-AMD_split <- initial_split(AMD, prop = 0.7,
-                                strata = AMD.Close)
+# Create 70-30 split for AMD data
+AMD_split <- initial_split(AMD, prop = 0.7, strata = AMD.Close)
 AMD_train <- training(AMD_split)
 AMD_test <- testing(AMD_split)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-NVDA_split <- initial_split(NVDA, prop = 0.7,
-                                strata = NVDA.Close)
+# Create 70-30 split for NVDA data
+NVDA_split <- initial_split(NVDA, prop = 0.7, strata = NVDA.Close)
 NVDA_train <- training(NVDA_split)
 NVDA_test <- testing(NVDA_split)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-INTC_split <- initial_split(INTC, prop = 0.7,
-                                strata = INTC.Close)
+# Create 70-30 split for INTC data
+INTC_split <- initial_split(INTC, prop = 0.7, strata = INTC.Close)
 INTC_train <- training(INTC_split)
 INTC_test <- testing(INTC_split)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-TSM_split <- initial_split(TSM, prop = 0.7,
-                                strata = TSM.Close)
+# Create 70-30 split for TSM data
+TSM_split <- initial_split(TSM, prop = 0.7, strata = TSM.Close)
 TSM_train <- training(TSM_split)
 TSM_test <- testing(TSM_split)
 ```
 
-## Model Fitting
+
+### Recipe Creation
+
+One of the most important steps in setting up a statistical learning model is telling the model which predictors to include and how to preprocess the data in our training set. Despite the fact that we have a wide range of predictors at our disposal, adding more predictors does not always indicate better performance of our model — for example, we have defined multiple versions of the simple moving average metric for each stock, though they may not all be simultaneously useful. Therefore we wish to judiciously choose the predictors which we will base each of our models off of. 
+
+Despite the high correlation between our lag variables, auto-regression tends to provide successful rudimentary models for predicting market behavior — for example, ARIMA (Autoregressive Integrated Moving Average, also known as Box-Jenkins) is one of the most popular forecasting methods for time-series problems. Consequently, we want to ensure that all of our lag variables are present for the regression algorithms. In addition, we also want to incorporate any common trading signals among investors: for example, since the strategy of investors changes with the sign of the MACD value, this lead to propagated trends which we would like our model to pick up on. Finally, we add all short-term (1 week)  metrics of data — however, it should be mentioned that the addition of these variables are the least motivated (for example, EMA is already used in MACD and SMA serves a very similar purpose).
+
+Using the `tidymodels` package, we are able to specify which variables are used to predict the outcome and process our data via the `recipe` data structure — though it is effectively the same for each individual stock, we need to repeat this step since the variable names pulled from `loadSymbols` do differ. 
+
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-AMD_recipe = recipe(AMD.Close ~ AMD.Close_L1 + AMD.Close_L2 + AMD.Close_L3 + AMD.Close_L4 +
-                      AMD.Close_L5 + AMD.Close_L6 + AMD.Close_L7 + AMD.Close_L8 + AMD.Close_L9 +
-                      AMD.Close_L10 + AMD.SMD_cl_1W + AMD.SMA_cl_1W + AMD.MACD,
+# Create AMD recipe
+AMD_recipe = recipe(AMD.Close ~ AMD.Close_L1 + AMD.Close_L2 + AMD.Close_L3 + AMD.Close_L4 + AMD.Close_L5 +
+                      AMD.Close_L6 + AMD.Close_L7 + AMD.Close_L8 + AMD.Close_L9 + AMD.Close_L10 +
+                      AMD.SMD_cl_1W + AMD.EMA_cl_1W +  AMD.SMA_cl_1W + AMD.MACD + AMD.Volume,
                     data=AMD_train) %>%
-  step_interact(terms= ~ AMD.Close_L1:AMD.Close_L2) %>%
-  step_interact(terms= ~ AMD.Close_L2:AMD.Close_L3) %>%
-  step_interact(terms= ~ AMD.Close_L3:AMD.Close_L4) %>%
-  step_interact(terms= ~ AMD.Close_L4:AMD.Close_L5) %>%
-  step_interact(terms= ~ AMD.Close_L5:AMD.Close_L6) %>%
-  step_interact(terms= ~ AMD.Close_L6:AMD.Close_L7) %>%
-  step_interact(terms= ~ AMD.Close_L7:AMD.Close_L8) %>%
-  step_interact(terms= ~ AMD.Close_L8:AMD.Close_L9) %>%
-  step_interact(terms= ~ AMD.Close_L9:AMD.Close_L10) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Create NVDA recipe
 NVDA_recipe = recipe(NVDA.Close ~ NVDA.Close_L1 + NVDA.Close_L2 + NVDA.Close_L3 + NVDA.Close_L4 + NVDA.Close_L5 + 
                        NVDA.Close_L6 + NVDA.Close_L7 + NVDA.Close_L8 + NVDA.Close_L9 + NVDA.Close_L10 +  
-                      NVDA.SMD_cl_1W + NVDA.SMA_cl_1W  + NVDA.MACD,
+                      NVDA.SMD_cl_1W + NVDA.SMA_cl_1W + NVDA.EMA_cl_1W  +  NVDA.MACD + NVDA.Volume,
                     data=NVDA_train) %>%
-  step_interact(terms= ~ NVDA.Close_L1:NVDA.Close_L2) %>%
-  step_interact(terms= ~ NVDA.Close_L2:NVDA.Close_L3) %>%
-  step_interact(terms= ~ NVDA.Close_L3:NVDA.Close_L4) %>%
-  step_interact(terms= ~ NVDA.Close_L4:NVDA.Close_L5) %>%
-  step_interact(terms= ~ NVDA.Close_L5:NVDA.Close_L6) %>%
-  step_interact(terms= ~ NVDA.Close_L6:NVDA.Close_L7) %>%
-  step_interact(terms= ~ NVDA.Close_L7:NVDA.Close_L8) %>%
-  step_interact(terms= ~ NVDA.Close_L8:NVDA.Close_L9) %>%
-  step_interact(terms= ~ NVDA.Close_L9:NVDA.Close_L10) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Create INTC recipe
 INTC_recipe = recipe(INTC.Close ~ INTC.Close_L1 + INTC.Close_L2 + INTC.Close_L3 + INTC.Close_L4 +
                       INTC.Close_L5 + INTC.Close_L6 + INTC.Close_L7 + INTC.Close_L8 + INTC.Close_L9 + INTC.Close_L10  +
-                      INTC.SMD_cl_1W + INTC.SMA_cl_1W + INTC.EMA_cl_1W + INTC.MACD,
+                      INTC.SMD_cl_1W + INTC.SMA_cl_1W + INTC.EMA_cl_1W + INTC.MACD + INTC.Volume,
                     data=INTC_train) %>%
-  step_interact(terms= ~ INTC.Close_L1:INTC.Close_L2) %>%
-  step_interact(terms= ~ INTC.Close_L2:INTC.Close_L3) %>%
-  step_interact(terms= ~ INTC.Close_L3:INTC.Close_L4) %>%
-  step_interact(terms= ~ INTC.Close_L4:INTC.Close_L5) %>%
-  step_interact(terms= ~ INTC.Close_L5:INTC.Close_L6) %>%
-  step_interact(terms= ~ INTC.Close_L6:INTC.Close_L7) %>%
-  step_interact(terms= ~ INTC.Close_L7:INTC.Close_L8) %>%
-  step_interact(terms= ~ INTC.Close_L8:INTC.Close_L9) %>%
-  step_interact(terms= ~ INTC.Close_L9:INTC.Close_L10) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
+# Create TSM recipe
 TSM_recipe = recipe(TSM.Close ~ TSM.Close_L1 + TSM.Close_L2 + TSM.Close_L3 + TSM.Close_L4 +
                       TSM.Close_L5 + TSM.Close_L6 + TSM.Close_L7 + TSM.Close_L8 + TSM.Close_L9 + TSM.Close_L10 +
-                      TSM.SMD_cl_1W + TSM.SMA_cl_1W + TSM.EMA_cl_1W + TSM.MACD,
+                      TSM.SMD_cl_1W + TSM.SMA_cl_1W + TSM.EMA_cl_1W + TSM.MACD + TSM.Volume,
                     data=TSM_train) %>%
-  step_interact(terms= ~ TSM.Close_L1:TSM.Close_L2) %>%
-  step_interact(terms= ~ TSM.Close_L2:TSM.Close_L3) %>%
-  step_interact(terms= ~ TSM.Close_L3:TSM.Close_L4) %>%
-  step_interact(terms= ~ TSM.Close_L4:TSM.Close_L5) %>%
-  step_interact(terms= ~ TSM.Close_L5:TSM.Close_L6) %>%
-  step_interact(terms= ~ TSM.Close_L6:TSM.Close_L7) %>%
-  step_interact(terms= ~ TSM.Close_L7:TSM.Close_L8) %>%
-  step_interact(terms= ~ TSM.Close_L8:TSM.Close_L9) %>%
-  step_interact(terms= ~ TSM.Close_L9:TSM.Close_L10) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
 ```
 
 ## k-Fold Cross Validation
+
+As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of _k-fold cross validation_ is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k \geq 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
 AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = AMD.Close)
@@ -986,502 +948,724 @@ TSM_folds  <- vfold_cv(TSM_train, v = 10, strata = TSM.Close)
 ## Fitting the Models
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression
-lm_model <- linear_reg() %>%
+############################
+# Define Model for Linear Regression
+############################
+linear_model <- linear_reg() %>%
   set_engine("lm")
 
-
-# Ridge Regression
+############################
+# Define Model for Ridge Regression
+############################
 ridge_model <- linear_reg(mixture = 0,
                          penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
 
-# Lasso Regression
+############################
+# Define Model for Lasso Regression
+############################
 lasso_model <- linear_reg(mixture = 1,
                          penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
 
-
-# Elastic Net
+############################
+# Define Model for Elastic Net
+############################
 elastic_net_model <- linear_reg(mixture = tune(),
                               penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
 
-# k-Nearest Neighbors
+############################
+# Define Model for k-Nearest Neighbors
+############################
 knn_model <- nearest_neighbor(neighbors = tune()) %>%
   set_engine("kknn") %>%
   set_mode("regression")
+
+############################
+# Define Model for Random Forest
+############################
+random_forest_model <- rand_forest(mtry = tune(), 
+                       trees = tune(), 
+                       min_n = tune()) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("regression")
+
+############################
+# Define Model for Boosted Trees
+############################
+boosted_trees_model <- boost_tree(mtry = tune(), 
+                           trees = tune(), 
+                           learn_rate = tune()) %>%
+  set_engine("xgboost") %>% 
+  set_mode("regression")
 ```
 
-### Set Up Workflows
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Workflows
-lm_wflow_AMD <- workflow() %>%
-  add_model(lm_model) %>%
+############################
+# Set Up Workflows for Linear Regression
+############################
+linear_wflow_AMD <- workflow() %>%
+  add_model(linear_model) %>%
   add_recipe(AMD_recipe)
+linear_wflow_NVDA <- workflow() %>%
+  add_model(linear_model) %>%
+  add_recipe(NVDA_recipe)
+linear_wflow_INTC <- workflow() %>%
+  add_model(linear_model) %>%
+  add_recipe(INTC_recipe)
+linear_wflow_TSM <- workflow() %>%
+  add_model(linear_model) %>%
+  add_recipe(TSM_recipe)
  
-# Ridge Regression Workflows
+############################
+# Set Up Workflows for Ridge Regression
+############################
 ridge_wflow_AMD <- workflow() %>%
   add_model(ridge_model) %>%
   add_recipe(AMD_recipe)
- 
-# Lasso Regression Workflows
-lasso_wflow_AMD <- workflow() %>%
-  add_model(lasso_model) %>%
-  add_recipe(AMD_recipe)
- 
-# Elastic Net Workflows
-elastic_net_wflow_AMD <- workflow() %>%
-  add_model(elastic_net_model) %>%
-  add_recipe(AMD_recipe)
-  
-# k-Nearest Neighbors Workflows
-knn_wflow_AMD <- workflow() %>%
-  add_model(knn_model) %>%
-  add_recipe(AMD_recipe)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Workflows
-lm_wflow_NVDA <- workflow() %>%
-  add_model(lm_model) %>%
-  add_recipe(NVDA_recipe)
- 
-# Ridge Regression Workflows
 ridge_wflow_NVDA <- workflow() %>%
   add_model(ridge_model) %>%
   add_recipe(NVDA_recipe)
- 
-# Lasso Regression Workflows
-lasso_wflow_NVDA <- workflow() %>%
-  add_model(lasso_model) %>%
-  add_recipe(NVDA_recipe)
- 
-# Elastic Net Workflows
-elastic_net_wflow_NVDA <- workflow() %>%
-  add_model(elastic_net_model) %>%
-  add_recipe(NVDA_recipe)
-  
-# k-Nearest Neighbors Workflows
-knn_wflow_NVDA <- workflow() %>%
-  add_model(knn_model) %>%
-  add_recipe(NVDA_recipe)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Workflows
-lm_wflow_INTC <- workflow() %>%
-  add_model(lm_model) %>%
-  add_recipe(INTC_recipe)
- 
-# Ridge Regression Workflows
 ridge_wflow_INTC <- workflow() %>%
   add_model(ridge_model) %>%
   add_recipe(INTC_recipe)
- 
-# Lasso Regression Workflows
-lasso_wflow_INTC <- workflow() %>%
-  add_model(lasso_model) %>%
-  add_recipe(INTC_recipe)
- 
-# Elastic Net Workflows
-elastic_net_wflow_INTC <- workflow() %>%
-  add_model(elastic_net_model) %>%
-  add_recipe(INTC_recipe)
-  
-# k-Nearest Neighbors Workflows
-knn_wflow_INTC <- workflow() %>%
-  add_model(knn_model) %>%
-  add_recipe(INTC_recipe)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Workflows
-lm_wflow_TSM <- workflow() %>%
-  add_model(lm_model) %>%
-  add_recipe(TSM_recipe)
- 
-# Ridge Regression Workflows
 ridge_wflow_TSM <- workflow() %>%
   add_model(ridge_model) %>%
   add_recipe(TSM_recipe)
  
-# Lasso Regression Workflows
+############################
+# Set Up Workflows for Lasso Regression
+############################
+lasso_wflow_AMD <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(AMD_recipe)
+lasso_wflow_NVDA <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(NVDA_recipe)
+lasso_wflow_INTC <- workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(INTC_recipe)
 lasso_wflow_TSM <- workflow() %>%
   add_model(lasso_model) %>%
   add_recipe(TSM_recipe)
  
-# Elastic Net Workflows
+############################
+# Set Up Workflows for Elastic Net
+############################
+elastic_net_wflow_AMD <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(AMD_recipe)
+elastic_net_wflow_NVDA <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(NVDA_recipe)
+elastic_net_wflow_INTC <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(INTC_recipe)
 elastic_net_wflow_TSM <- workflow() %>%
   add_model(elastic_net_model) %>%
   add_recipe(TSM_recipe)
   
-# k-Nearest Neighbors Workflows
+############################
+# Set Up Workflows for k-Nearest Neighbors
+############################
+knn_wflow_AMD <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(AMD_recipe)
+knn_wflow_NVDA <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(NVDA_recipe)
+knn_wflow_INTC <- workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(INTC_recipe)
 knn_wflow_TSM <- workflow() %>%
   add_model(knn_model) %>%
   add_recipe(TSM_recipe)
+
+############################
+# Set Up Workflows for Random Forest
+############################
+random_forest_wflow_AMD <- workflow() %>% 
+  add_model(random_forest_model) %>%
+  add_recipe(AMD_recipe)
+random_forest_wflow_NVDA <- workflow() %>% 
+  add_model(random_forest_model) %>%
+  add_recipe(NVDA_recipe) 
+random_forest_wflow_INTC <- workflow() %>% 
+  add_model(random_forest_model) %>%
+  add_recipe(INTC_recipe) 
+random_forest_wflow_TSM <- workflow() %>% 
+  add_model(random_forest_model) %>%
+  add_recipe(TSM_recipe) 
+
+############################
+# Set Up Workflows for Boosted Trees
+############################
+boosted_trees_wflow_AMD <- workflow() %>% 
+  add_model(boosted_trees_model) %>% 
+  add_recipe(AMD_recipe)
+boosted_trees_wflow_NVDA <- workflow() %>% 
+  add_model(boosted_trees_model) %>% 
+  add_recipe(NVDA_recipe)
+boosted_trees_wflow_INTC <- workflow() %>% 
+  add_model(boosted_trees_model) %>% 
+  add_recipe(INTC_recipe)
+boosted_trees_wflow_TSM <- workflow() %>% 
+  add_model(boosted_trees_model) %>% 
+  add_recipe(TSM_recipe)
 ```
 
-### Hyperparameter Tuning
+
+### Tuning Hyperparameters
 
 Set up Grids:
-
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Grid for Ridge Regression and Lasso Regression
-no_mixture_grid <- grid_regular(penalty(range = c(0,1)), levels = 50)
+############################
+# Define Grid for Ridge AND Lasso Regression
+############################
+lambda_grid <- grid_regular(penalty(),
+                            levels = 50)
 
-# Grid for Elastic Net
+############################
+# Define Grid for Elastic Net
+############################
 elastic_net_grid <- grid_regular(penalty(range = c(0, 1),
                                      trans = identity_trans()),
                         mixture(range = c(0, 1)),
                              levels = 10)
 
-# k-Nearest Neighbors Net
-knn_grid <- grid_regular(neighbors(range = c(2,20)), levels = 10)
+############################
+# Define Model for k-Nearest Neighbors
+############################
+knn_grid <- grid_regular(neighbors(),
+                         levels = 10)
+
+############################
+# Define Model for Random Forest
+############################
+random_forest_grid <- grid_regular(mtry(range = c(2, 8)),
+                        trees(range = c(250,500)),
+                        min_n(range = c(10,20)),
+                        levels = 5)
+
+############################
+# Define Model for Boosted Trees
+############################
+boosted_trees_grid <- grid_regular(mtry(range = c(2, 8)), 
+                        trees(range = c(200, 700)),
+                        learn_rate(range = c(-5, -1)),
+                        levels = 5)
 ```
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Find optimal parameters for ridge regression
+
+
+```{r eval = FALSE, include=TRUE, warnings=FALSE}
+############################
+# Optimize parameters for Ridge Regression
+############################
 ridge_tune_AMD <- tune_grid(
   ridge_wflow_AMD,
   resamples = AMD_folds,
-  grid = no_mixture_grid
+  grid = lambda_grid
 )
-ridge_final_wflow_AMD  <- select_best(ridge_tune_AMD , metric="rmse" ) %>%
-  finalize_workflow(x=ridge_wflow_AMD )
+ridge_tune_NVDA <- tune_grid(
+  ridge_wflow_NVDA,
+  resamples = NVDA_folds,
+  grid = lambda_grid
+)
+ridge_tune_INTC <- tune_grid(
+  ridge_wflow_INTC,
+  resamples = INTC_folds,
+  grid = lambda_grid
+)
+ridge_tune_TSM <- tune_grid(
+  ridge_wflow_TSM,
+  resamples = TSM_folds,
+  grid = lambda_grid
+)
 
-# Find optimal parameters for lasso regression
+save(ridge_tune_AMD, file = "tuned_grids/ridge_tune_AMD.rda")
+save(ridge_tune_NVDA, file = "tuned_grids/ridge_tune_NVDA.rda")
+save(ridge_tune_INTC, file = "tuned_grids/ridge_tune_INTC.rda")
+save(ridge_tune_TSM, file = "tuned_grids/ridge_tune_TSM.rda")
+
+############################
+# Optimize parameters for Lasso Regression
+############################
 lasso_tune_AMD  <- tune_grid(
   lasso_wflow_AMD ,
   resamples = AMD_folds,
-  grid = no_mixture_grid
+  grid = lambda_grid
 )
-lasso_final_wflow_AMD  <- select_best(lasso_tune_AMD , metric="rmse") %>%
-  finalize_workflow(x=lasso_wflow_AMD )
+lasso_tune_NVDA  <- tune_grid(
+  lasso_wflow_NVDA ,
+  resamples = NVDA_folds,
+  grid = lambda_grid
+)
+lasso_tune_INTC  <- tune_grid(
+  lasso_wflow_INTC ,
+  resamples = INTC_folds,
+  grid = lambda_grid
+)
+lasso_tune_TSM  <- tune_grid(
+  lasso_wflow_TSM ,
+  resamples = TSM_folds,
+  grid = lambda_grid
+)
 
-# Find optimal parameters for Elastic Net
+save(lasso_tune_AMD, file = "tuned_grids/lasso_tune_AMD.rda")
+save(lasso_tune_NVDA, file = "tuned_grids/lasso_tune_NVDA.rda")
+save(lasso_tune_INTC, file = "tuned_grids/lasso_tune_INTC.rda")
+save(lasso_tune_TSM, file = "tuned_grids/lasso_tune_TSM.rda")
+
+############################
+# Optimize parameters for Elastic Net 
+############################
 elastic_net_tune_AMD  <- tune_grid(
   elastic_net_wflow_AMD ,
   resamples = AMD_folds,
   grid = elastic_net_grid
 )
-elastic_net_final_wflow_AMD  <- select_best(elastic_net_tune_AMD , metric = "rmse") %>%
-  finalize_workflow(x=elastic_net_wflow_AMD )
-
-# Find optimal parameters for k-Nearest Neighbors
-knn_tune_AMD  <- tune_grid(
-    knn_wflow_AMD ,
-    resamples = AMD_folds,
-    grid = knn_grid
-)
-knn_final_wflow_AMD  <- select_best(knn_tune_AMD , metric = "rmse") %>%
-  finalize_workflow(x=knn_wflow_AMD )
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Find optimal parameters for ridge regression
-ridge_tune_NVDA <- tune_grid(
-  ridge_wflow_NVDA,
-  resamples = NVDA_folds,
-  grid = no_mixture_grid
-)
-ridge_final_wflow_NVDA  <- select_best(ridge_tune_NVDA , metric="rmse" ) %>%
-  finalize_workflow(x=ridge_wflow_NVDA )
-
-# Find optimal parameters for lasso regression
-lasso_tune_NVDA  <- tune_grid(
-  lasso_wflow_NVDA ,
-  resamples = NVDA_folds,
-  grid = no_mixture_grid
-)
-lasso_final_wflow_NVDA  <- select_best(lasso_tune_NVDA , metric="rmse") %>%
-  finalize_workflow(x=lasso_wflow_NVDA )
-
-# Find optimal parameters for Elastic Net
 elastic_net_tune_NVDA  <- tune_grid(
   elastic_net_wflow_NVDA ,
   resamples = NVDA_folds,
   grid = elastic_net_grid
 )
-elastic_net_final_wflow_NVDA  <- select_best(elastic_net_tune_NVDA , metric = "rmse") %>%
-  finalize_workflow(x=elastic_net_wflow_NVDA )
-
-# Find optimal parameters for k-Nearest Neighbors
-knn_tune_NVDA  <- tune_grid(
-    knn_wflow_NVDA ,
-    resamples = NVDA_folds,
-    grid = knn_grid
-)
-knn_final_wflow_NVDA  <- select_best(knn_tune_NVDA , metric = "rmse") %>%
-  finalize_workflow(x=knn_wflow_NVDA )
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Find optimal parameters for ridge regression
-ridge_tune_INTC <- tune_grid(
-  ridge_wflow_INTC,
-  resamples = INTC_folds,
-  grid = no_mixture_grid
-)
-ridge_final_wflow_INTC  <- select_best(ridge_tune_INTC , metric="rmse" ) %>%
-  finalize_workflow(x=ridge_wflow_INTC )
-
-# Find optimal parameters for lasso regression
-lasso_tune_INTC  <- tune_grid(
-  lasso_wflow_INTC ,
-  resamples = INTC_folds,
-  grid = no_mixture_grid
-)
-lasso_final_wflow_INTC  <- select_best(lasso_tune_INTC , metric="rmse") %>%
-  finalize_workflow(x=lasso_wflow_INTC )
-
-# Find optimal parameters for Elastic Net
 elastic_net_tune_INTC  <- tune_grid(
   elastic_net_wflow_INTC ,
   resamples = INTC_folds,
   grid = elastic_net_grid
 )
-elastic_net_final_wflow_INTC  <- select_best(elastic_net_tune_INTC , metric = "rmse") %>%
-  finalize_workflow(x=elastic_net_wflow_INTC )
-
-# Find optimal parameters for k-Nearest Neighbors
-knn_tune_INTC  <- tune_grid(
-    knn_wflow_INTC ,
-    resamples = INTC_folds,
-    grid = knn_grid
-)
-knn_final_wflow_INTC  <- select_best(knn_tune_INTC , metric = "rmse") %>%
-  finalize_workflow(x=knn_wflow_INTC )
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Find optimal parameters for ridge regression
-ridge_tune_TSM <- tune_grid(
-  ridge_wflow_TSM,
-  resamples = TSM_folds,
-  grid = no_mixture_grid
-)
-ridge_final_wflow_TSM  <- select_best(ridge_tune_TSM , metric="rmse" ) %>%
-  finalize_workflow(x=ridge_wflow_TSM )
-
-# Find optimal parameters for lasso regression
-lasso_tune_TSM  <- tune_grid(
-  lasso_wflow_TSM ,
-  resamples = TSM_folds,
-  grid = no_mixture_grid
-)
-lasso_final_wflow_TSM  <- select_best(lasso_tune_TSM , metric="rmse") %>%
-  finalize_workflow(x=lasso_wflow_TSM )
-
-# Find optimal parameters for Elastic Net
 elastic_net_tune_TSM  <- tune_grid(
   elastic_net_wflow_TSM ,
   resamples = TSM_folds,
   grid = elastic_net_grid
 )
-elastic_net_final_wflow_TSM  <- select_best(elastic_net_tune_TSM , metric = "rmse") %>%
-  finalize_workflow(x=elastic_net_wflow_TSM )
 
-# Find optimal parameters for k-Nearest Neighbors
+save(elastic_net_tune_AMD, file = "tuned_grids/elastic_net_tune_AMD.rda")
+save(elastic_net_tune_NVDA, file = "tuned_grids/elastic_net_tune_NVDA.rda")
+save(elastic_net_tune_INTC, file = "tuned_grids/elastic_net_tune_INTC.rda")
+save(elastic_net_tune_TSM, file = "tuned_grids/elastic_net_tune_TSM.rda")
+
+############################
+# Optimize parameters for k-Nearest Neighbors
+############################
+knn_tune_AMD  <- tune_grid(
+    knn_wflow_AMD ,
+    resamples = AMD_folds,
+    grid = knn_grid
+)
+knn_tune_NVDA  <- tune_grid(
+    knn_wflow_NVDA ,
+    resamples = NVDA_folds,
+    grid = knn_grid
+)
+knn_tune_INTC  <- tune_grid(
+    knn_wflow_INTC ,
+    resamples = INTC_folds,
+    grid = knn_grid
+)
 knn_tune_TSM  <- tune_grid(
     knn_wflow_TSM ,
     resamples = TSM_folds,
     grid = knn_grid
 )
+
+save(knn_tune_AMD, file = "tuned_grids/knn_tune_AMD.rda")
+save(knn_tune_NVDA, file = "tuned_grids/knn_tune_NVDA.rda")
+save(knn_tune_INTC, file = "tuned_grids/knn_tune_INTC.rda")
+save(knn_tune_TSM, file = "tuned_grids/knn_tune_TSM.rda")
+
+############################
+# Optimize parameters for Random Forest
+############################
+random_forest_tune_AMD <- tune_grid( 
+  random_forest_wflow_AMD,
+  resamples = AMD_folds,
+  grid = random_forest_grid
+)
+random_forest_tune_NVDA <- tune_grid( 
+  random_forest_wflow_NVDA,
+  resamples = NVDA_folds,
+  grid = random_forest_grid
+)
+random_forest_tune_INTC <- tune_grid( 
+  random_forest_wflow_INTC,
+  resamples = INTC_folds,
+  grid = random_forest_grid
+)
+random_forest_tune_TSM <- tune_grid( 
+  random_forest_wflow_TSM,
+  resamples = TSM_folds,
+  grid = random_forest_grid
+)
+
+save(random_forest_tune_AMD, file = "tuned_grids/random_forest_tune_AMD.rda")
+save(random_forest_tune_NVDA, file = "tuned_grids/random_forest_tune_NVDA.rda")
+save(random_forest_tune_INTC, file = "tuned_grids/random_forest_tune_INTC.rda")
+save(random_forest_tune_TSM, file = "tuned_grids/random_forest_tune_TSM.rda")
+
+############################
+# Optimize parameters for Boosted Trees
+############################
+boosted_trees_tune_AMD <- tune_grid( 
+  boosted_trees_wflow_AMD,
+  resamples = AMD_folds,
+  grid = boosted_trees_grid
+)
+boosted_trees_tune_NVDA <- tune_grid( 
+  boosted_trees_wflow_NVDA,
+  resamples = NVDA_folds,
+  grid = boosted_trees_grid
+)
+boosted_trees_tune_INTC <- tune_grid( 
+  boosted_trees_wflow_INTC,
+  resamples = INTC_folds,
+  grid = boosted_trees_grid
+)
+boosted_trees_tune_TSM <- tune_grid( 
+  boosted_trees_wflow_TSM,
+  resamples = TSM_folds,
+  grid = boosted_trees_grid
+)
+
+save(boosted_trees_tune_AMD, file = "tuned_grids/boosted_trees_tune_AMD.rda")
+save(boosted_trees_tune_NVDA, file = "tuned_grids/boosted_trees_tune_NVDA.rda")
+save(boosted_trees_tune_INTC, file = "tuned_grids/boosted_trees_tune_INTC.rda")
+save(boosted_trees_tune_TSM, file = "tuned_grids/boosted_trees_tune_TSM.rda")
+```
+ 
+
+Model Performance of Hyperparameter Tuning:
+ 
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+ # Load tuned Ridge Regression grids
+load("tuned_grids/ridge_tune_AMD.rda")
+load("tuned_grids/ridge_tune_NVDA.rda")
+load("tuned_grids/ridge_tune_INTC.rda")
+load("tuned_grids/ridge_tune_TSM.rda")
+
+autoplot(ridge_tune_AMD) + theme_dark()
+autoplot(ridge_tune_NVDA) + theme_dark()
+```
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+ # Load tuned Lasso Regression grids
+load("tuned_grids/lasso_tune_AMD.rda")
+load("tuned_grids/lasso_tune_NVDA.rda")
+load("tuned_grids/lasso_tune_INTC.rda")
+load("tuned_grids/lasso_tune_TSM.rda")
+
+autoplot(lasso_tune_AMD) + theme_dark()
+autoplot(lasso_tune_NVDA) + theme_dark()
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+ # Load tuned Elastic Net grids
+load("tuned_grids/elastic_net_tune_AMD.rda")
+load("tuned_grids/elastic_net_tune_NVDA.rda")
+load("tuned_grids/elastic_net_tune_INTC.rda")
+load("tuned_grids/elastic_net_tune_TSM.rda")
+
+autoplot(elastic_net_tune_AMD) + theme_dark()
+autoplot(elastic_net_tune_NVDA) + theme_dark()
+```
+
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+# Load tuned k-Nearest Neighbors grids
+load("tuned_grids/knn_tune_AMD.rda")
+load("tuned_grids/knn_tune_NVDA.rda")
+load("tuned_grids/knn_tune_INTC.rda")
+load("tuned_grids/knn_tune_TSM.rda")
+
+autoplot(knn_tune_AMD) + theme_dark()
+autoplot(knn_tune_NVDA) + theme_dark()
+```
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+# Load tuned Random Forest grids
+load("tuned_grids/random_forest_tune_AMD.rda")
+load("tuned_grids/random_forest_tune_NVDA.rda")
+load("tuned_grids/random_forest_tune_INTC.rda")
+load("tuned_grids/random_forest_tune_TSM.rda")
+
+autoplot(random_forest_tune_AMD) + theme_dark() + theme(text = element_text(size = 9))
+autoplot(random_forest_tune_NVDA) + theme_dark() + theme(text = element_text(size = 9))
+```
+```{r eval = TRUE, include=TRUE, warnings=FALSE, fig.show="hold", out.width="50%"}
+# Load tuned Boosted Trees grids
+load("tuned_grids/boosted_trees_tune_AMD.rda")
+load("tuned_grids/boosted_trees_tune_NVDA.rda")
+load("tuned_grids/boosted_trees_tune_INTC.rda")
+load("tuned_grids/boosted_trees_tune_TSM.rda")
+
+autoplot(boosted_trees_tune_AMD) + theme_dark() + theme(text = element_text(size = 9))
+autoplot(boosted_trees_tune_NVDA) + theme_dark() + theme(text = element_text(size = 9))
+```
+
+
+
+
+Finalize Workflows
+```{r eval = TRUE, include=TRUE, warnings=FALSE}
+############################
+# Select best model(s) for Ridge Regression
+############################
+ridge_final_wflow_AMD  <- select_best(ridge_tune_AMD , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_AMD )
+ridge_final_wflow_NVDA  <- select_best(ridge_tune_NVDA , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_NVDA )
+ridge_final_wflow_INTC  <- select_best(ridge_tune_INTC , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_INTC )
+ridge_final_wflow_TSM  <- select_best(ridge_tune_TSM , metric="rmse" ) %>%
+  finalize_workflow(x=ridge_wflow_TSM )
+
+############################
+# Select best model(s) for Lasso Regression
+############################
+lasso_final_wflow_AMD  <- select_best(lasso_tune_AMD , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_AMD )
+lasso_final_wflow_NVDA  <- select_best(lasso_tune_NVDA , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_NVDA )
+lasso_final_wflow_INTC  <- select_best(lasso_tune_INTC , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_INTC )
+lasso_final_wflow_TSM  <- select_best(lasso_tune_TSM , metric="rmse") %>%
+  finalize_workflow(x=lasso_wflow_TSM )
+
+############################
+# Select best model(s) for Elastic Net
+############################
+elastic_net_final_wflow_AMD  <- select_best(elastic_net_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_AMD )
+elastic_net_final_wflow_NVDA  <- select_best(elastic_net_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_NVDA )
+elastic_net_final_wflow_INTC  <- select_best(elastic_net_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_INTC )
+elastic_net_final_wflow_TSM  <- select_best(elastic_net_tune_TSM , metric = "rmse") %>%
+  finalize_workflow(x=elastic_net_wflow_TSM )
+
+############################
+# Select best model(s) for k-Nearest Neighbors
+############################
+knn_final_wflow_AMD  <- select_best(knn_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_AMD )
+knn_final_wflow_NVDA  <- select_best(knn_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_NVDA )
+knn_final_wflow_INTC  <- select_best(knn_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=knn_wflow_INTC )
 knn_final_wflow_TSM  <- select_best(knn_tune_TSM , metric = "rmse") %>%
   finalize_workflow(x=knn_wflow_TSM )
+
+############################
+# Select best model(s) for Random Forest
+############################
+random_forest_final_wflow_AMD <- select_best(random_forest_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=random_forest_wflow_AMD )
+random_forest_final_wflow_NVDA <- select_best(random_forest_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=random_forest_wflow_NVDA )
+random_forest_final_wflow_INTC <- select_best(random_forest_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=random_forest_wflow_INTC )
+random_forest_final_wflow_TSM <- select_best(random_forest_tune_TSM , metric = "rmse") %>%
+  finalize_workflow(x=random_forest_wflow_TSM )
+
+############################
+# Select best model(s) for Boosted Trees
+############################
+boosted_trees_final_wflow_AMD <- select_best(boosted_trees_tune_AMD , metric = "rmse") %>%
+  finalize_workflow(x=boosted_trees_wflow_AMD )
+boosted_trees_final_wflow_NVDA <- select_best(boosted_trees_tune_NVDA , metric = "rmse") %>%
+  finalize_workflow(x=boosted_trees_wflow_NVDA )
+boosted_trees_final_wflow_INTC <- select_best(boosted_trees_tune_INTC , metric = "rmse") %>%
+  finalize_workflow(x=boosted_trees_wflow_INTC )
+boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "rmse") %>%
+  finalize_workflow(x=boosted_trees_wflow_TSM )
 ```
 
 ### Model Fitting
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Fits
-lm_fit_AMD  <- fit(lm_wflow_AMD, AMD_train)
- 
-# Ridge Regression Fits
+############################
+# Fit model(s) for Linear Regression
+############################
+linear_fit_AMD  <- fit(linear_wflow_AMD, AMD_train)
+linear_fit_NVDA  <- fit(linear_wflow_NVDA, NVDA_train)
+linear_fit_INTC  <- fit(linear_wflow_INTC, INTC_train)
+linear_fit_TSM  <- fit(linear_wflow_TSM, TSM_train)
+
+############################
+# Fit model(s) for Ridge Regression
+############################
 ridge_fit_AMD  <- fit(ridge_final_wflow_AMD , AMD_train)
- 
-# Lasso Regression Fits
-lasso_fit_AMD  <- fit(lasso_final_wflow_AMD , AMD_train)
-
-# Elastic Net Fits
-elastic_net_fit_AMD <- fit(elastic_net_final_wflow_AMD , AMD_train)
- 
-# k-Nearest Neighbors Fit
-knn_fit_AMD  <- fit(knn_final_wflow_AMD , AMD_train)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Fits
-lm_fit_NVDA  <- fit(lm_wflow_NVDA, NVDA_train)
- 
-# Ridge Regression Fits
 ridge_fit_NVDA  <- fit(ridge_final_wflow_NVDA , NVDA_train)
- 
-# Lasso Regression Fits
-lasso_fit_NVDA  <- fit(lasso_final_wflow_NVDA , NVDA_train)
-
-# Elastic Net Fits
-elastic_net_fit_NVDA <- fit(elastic_net_final_wflow_NVDA , NVDA_train)
- 
-# k-Nearest Neighbors Fit
-knn_fit_NVDA  <- fit(knn_final_wflow_NVDA , NVDA_train)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Fits
-lm_fit_INTC  <- fit(lm_wflow_INTC, INTC_train)
- 
-# Ridge Regression Fits
 ridge_fit_INTC  <- fit(ridge_final_wflow_INTC , INTC_train)
- 
-# Lasso Regression Fits
-lasso_fit_INTC  <- fit(lasso_final_wflow_INTC , INTC_train)
-
-# Elastic Net Fits
-elastic_net_fit_INTC <- fit(elastic_net_final_wflow_INTC , INTC_train)
- 
-# k-Nearest Neighbors Fit
-knn_fit_INTC  <- fit(knn_final_wflow_INTC , INTC_train)
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Fits
-lm_fit_TSM  <- fit(lm_wflow_TSM, TSM_train)
- 
-# Ridge Regression Fits
 ridge_fit_TSM  <- fit(ridge_final_wflow_TSM , TSM_train)
- 
-# Lasso Regression Fits
+
+############################
+# Fit model(s) for Lasso Regression
+############################
+lasso_fit_AMD  <- fit(lasso_final_wflow_AMD , AMD_train)
+lasso_fit_NVDA  <- fit(lasso_final_wflow_NVDA , NVDA_train)
+lasso_fit_INTC  <- fit(lasso_final_wflow_INTC , INTC_train)
 lasso_fit_TSM  <- fit(lasso_final_wflow_TSM , TSM_train)
 
-# Elastic Net Fits
+############################
+# Fit model(s) for Elastic Net
+############################
+elastic_net_fit_AMD <- fit(elastic_net_final_wflow_AMD , AMD_train)
+elastic_net_fit_NVDA <- fit(elastic_net_final_wflow_NVDA , NVDA_train)
+elastic_net_fit_INTC <- fit(elastic_net_final_wflow_INTC , INTC_train)
 elastic_net_fit_TSM <- fit(elastic_net_final_wflow_TSM , TSM_train)
- 
-# k-Nearest Neighbors Fit
+
+############################
+# Fit model(s) for k-Nearest Neighbors
+############################
+knn_fit_AMD  <- fit(knn_final_wflow_AMD , AMD_train)
+knn_fit_NVDA  <- fit(knn_final_wflow_NVDA , NVDA_train)
+knn_fit_INTC  <- fit(knn_final_wflow_INTC , INTC_train)
 knn_fit_TSM  <- fit(knn_final_wflow_TSM , TSM_train)
+
+############################
+# Fit model(s) for Random Forest
+############################
+random_forest_fit_AMD  <- fit(random_forest_final_wflow_AMD , AMD_train)
+random_forest_fit_NVDA  <- fit(random_forest_final_wflow_NVDA , NVDA_train)
+random_forest_fit_TSM  <- fit(random_forest_final_wflow_TSM, TSM_train)
+random_forest_fit_INTC  <- fit(random_forest_final_wflow_INTC, INTC_train)
+
+############################
+# Fit model(s) for Boosted Trees
+############################
+boosted_trees_fit_AMD  <- fit(boosted_trees_final_wflow_AMD , AMD_train)
+boosted_trees_fit_NVDA  <- fit(boosted_trees_final_wflow_NVDA , NVDA_train)
+boosted_trees_fit_TSM  <- fit(boosted_trees_final_wflow_TSM, TSM_train)
+boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 ```
 
 ### Model Results
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Training
-lm_train_res_AMD  <- predict(lm_fit_AMD , new_data = AMD_train %>% select(-AMD.Close))
-lm_train_res_AMD  <- bind_cols(lm_train_res_AMD , AMD_train %>% select(AMD.Close))
+############################
+# Use Linear Regression Fit to Predict Training Data
+############################
+linear_train_res_AMD  <- predict(linear_fit_AMD, new_data = AMD_train %>% select(-AMD.Close)) %>%
+                          bind_cols(AMD_train %>% select(AMD.Close))
+linear_train_res_NVDA  <- predict(linear_fit_NVDA, new_data = NVDA_train %>% select(-NVDA.Close)) %>%
+                          bind_cols(NVDA_train %>% select(NVDA.Close))
+linear_train_res_INTC  <- predict(linear_fit_INTC, new_data = INTC_train %>% select(-INTC.Close)) %>%
+                          bind_cols(INTC_train %>% select(INTC.Close))
+linear_train_res_TSM  <- predict(linear_fit_TSM, new_data = TSM_train %>% select(-TSM.Close)) %>%
+                          bind_cols(TSM_train %>% select(TSM.Close))
  
-# Ridge Regression Training
-ridge_train_res_AMD  <- predict(ridge_fit_AMD , new_data = AMD_train %>% select(-AMD.Close))
-ridge_train_res_AMD  <- bind_cols(ridge_train_res_AMD , AMD_train %>% select(AMD.Close))
+############################
+# Use Ridge Regression Fit to Predict Training Data
+############################
+ridge_train_res_AMD  <- predict(ridge_fit_AMD , new_data = AMD_train %>% select(-AMD.Close)) %>% 
+                        bind_cols(AMD_train %>% select(AMD.Close))
+ridge_train_res_NVDA  <- predict(ridge_fit_NVDA , new_data = NVDA_train %>% select(-NVDA.Close)) %>% 
+                        bind_cols(NVDA_train %>% select(NVDA.Close))
+ridge_train_res_INTC  <- predict(ridge_fit_INTC , new_data = INTC_train %>% select(-INTC.Close)) %>% 
+                        bind_cols(INTC_train %>% select(INTC.Close))
+ridge_train_res_TSM  <- predict(ridge_fit_TSM , new_data = TSM_train %>% select(-TSM.Close)) %>% 
+                        bind_cols(TSM_train %>% select(TSM.Close))
  
-# Lasso Regression Training
-lasso_train_res_AMD  <- predict(lasso_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close))
-lasso_train_res_AMD  <- bind_cols(lasso_train_res_AMD ,  AMD_train  %>% select(AMD.Close))
+############################
+# Use Lasso Regression Fit to Predict Training Data
+############################
+lasso_train_res_AMD  <- predict(lasso_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close)) %>% 
+                        bind_cols(AMD_train  %>% select(AMD.Close))
+lasso_train_res_NVDA  <- predict(lasso_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close)) %>% 
+                        bind_cols(NVDA_train  %>% select(NVDA.Close))
+lasso_train_res_INTC  <- predict(lasso_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close)) %>% 
+                        bind_cols(INTC_train  %>% select(INTC.Close))
+lasso_train_res_TSM  <- predict(lasso_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close)) %>% 
+                        bind_cols(TSM_train  %>% select(TSM.Close))
 
-# Elastic Net Training
-elastic_net_train_res_AMD  <- predict(elastic_net_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close ))
-elastic_net_train_res_AMD  <- bind_cols(elastic_net_train_res_AMD ,  AMD_train  %>% select(AMD.Close ))
+############################
+# Use Elastic Net Fit to Predict Training Data
+############################
+elastic_net_train_res_AMD  <- predict(elastic_net_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close )) %>% 
+                              bind_cols(AMD_train  %>% select(AMD.Close ))
+elastic_net_train_res_NVDA  <- predict(elastic_net_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close )) %>% 
+                              bind_cols(NVDA_train  %>% select(NVDA.Close ))
+elastic_net_train_res_INTC  <- predict(elastic_net_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close )) %>% 
+                              bind_cols(INTC_train  %>% select(INTC.Close ))
+elastic_net_train_res_TSM  <- predict(elastic_net_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close )) %>% 
+                              bind_cols(TSM_train  %>% select(TSM.Close ))
 
-# k-Nearest Neighbors Training
-knn_train_res_AMD  <- predict(knn_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close ))
-knn_train_res_AMD  <- bind_cols(knn_train_res_AMD ,  AMD_train  %>% select(AMD.Close ))
+############################
+# Use k-Nearest Neighbors Fit to Predict Training Data
+############################
+knn_train_res_AMD  <- predict(knn_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close )) %>% 
+                      bind_cols(AMD_train  %>% select(AMD.Close ))
+knn_train_res_NVDA  <- predict(knn_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close )) %>% 
+                      bind_cols(NVDA_train  %>% select(NVDA.Close ))
+knn_train_res_INTC  <- predict(knn_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close )) %>% 
+                      bind_cols(INTC_train  %>% select(INTC.Close ))
+knn_train_res_TSM  <- predict(knn_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close )) %>% 
+                      bind_cols(TSM_train  %>% select(TSM.Close ))
+
+############################
+# Use Random Forest Fit to Predict Training Data
+############################
+random_forest_train_res_AMD  <- predict(random_forest_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close )) %>% 
+                                bind_cols(AMD_train  %>% select(AMD.Close ))
+random_forest_train_res_NVDA  <- predict(random_forest_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close )) %>% 
+                                bind_cols(NVDA_train  %>% select(NVDA.Close ))
+random_forest_train_res_INTC  <- predict(random_forest_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close )) %>% 
+                                bind_cols(INTC_train  %>% select(INTC.Close ))
+random_forest_train_res_TSM  <- predict(random_forest_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close )) %>% 
+                                bind_cols(TSM_train  %>% select(TSM.Close ))
+
+############################
+# Use Booested Trees Fit to Predict Training Data
+############################
+boosted_trees_train_res_AMD  <- predict(boosted_trees_fit_AMD , new_data =  AMD_train  %>% select(-AMD.Close )) %>% 
+                                bind_cols(AMD_train  %>% select(AMD.Close ))
+boosted_trees_train_res_NVDA  <- predict(boosted_trees_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close )) %>% 
+                                bind_cols(NVDA_train  %>% select(NVDA.Close ))
+boosted_trees_train_res_INTC  <- predict(boosted_trees_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close )) %>% 
+                                bind_cols(INTC_train  %>% select(INTC.Close ))
+boosted_trees_train_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close )) %>% 
+                                bind_cols(TSM_train  %>% select(TSM.Close ))
 ```
 
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Training
-lm_train_res_NVDA  <- predict(lm_fit_NVDA , new_data = NVDA_train %>% select(-NVDA.Close))
-lm_train_res_NVDA  <- bind_cols(lm_train_res_NVDA , NVDA_train %>% select(NVDA.Close))
- 
-# Ridge Regression Training
-ridge_train_res_NVDA  <- predict(ridge_fit_NVDA , new_data = NVDA_train %>% select(-NVDA.Close))
-ridge_train_res_NVDA  <- bind_cols(ridge_train_res_NVDA , NVDA_train %>% select(NVDA.Close))
- 
-# Lasso Regression Training
-lasso_train_res_NVDA  <- predict(lasso_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close))
-lasso_train_res_NVDA  <- bind_cols(lasso_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close))
-
-# Elastic Net Training
-elastic_net_train_res_NVDA  <- predict(elastic_net_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close ))
-elastic_net_train_res_NVDA  <- bind_cols(elastic_net_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close ))
-
-# k-Nearest Neighbors Training
-knn_train_res_NVDA  <- predict(knn_fit_NVDA , new_data =  NVDA_train  %>% select(-NVDA.Close ))
-knn_train_res_NVDA  <- bind_cols(knn_train_res_NVDA ,  NVDA_train  %>% select(NVDA.Close ))
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Training
-lm_train_res_INTC  <- predict(lm_fit_INTC , new_data = INTC_train %>% select(-INTC.Close))
-lm_train_res_INTC  <- bind_cols(lm_train_res_INTC , INTC_train %>% select(INTC.Close))
- 
-# Ridge Regression Training
-ridge_train_res_INTC  <- predict(ridge_fit_INTC , new_data = INTC_train %>% select(-INTC.Close))
-ridge_train_res_INTC  <- bind_cols(ridge_train_res_INTC , INTC_train %>% select(INTC.Close))
- 
-# Lasso Regression Training
-lasso_train_res_INTC  <- predict(lasso_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close))
-lasso_train_res_INTC  <- bind_cols(lasso_train_res_INTC ,  INTC_train  %>% select(INTC.Close))
-
-# Elastic Net Training
-elastic_net_train_res_INTC  <- predict(elastic_net_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close ))
-elastic_net_train_res_INTC  <- bind_cols(elastic_net_train_res_INTC ,  INTC_train  %>% select(INTC.Close ))
-
-# k-Nearest Neighbors Training
-knn_train_res_INTC  <- predict(knn_fit_INTC , new_data =  INTC_train  %>% select(-INTC.Close ))
-knn_train_res_INTC  <- bind_cols(knn_train_res_INTC ,  INTC_train  %>% select(INTC.Close ))
-```
-
-```{r eval = TRUE, include=TRUE, warnings=FALSE}
-# Linear Regression Training
-lm_train_res_TSM  <- predict(lm_fit_TSM , new_data = TSM_train %>% select(-TSM.Close))
-lm_train_res_TSM  <- bind_cols(lm_train_res_TSM , TSM_train %>% select(TSM.Close))
- 
-# Ridge Regression Training
-ridge_train_res_TSM  <- predict(ridge_fit_TSM , new_data = TSM_train %>% select(-TSM.Close))
-ridge_train_res_TSM  <- bind_cols(ridge_train_res_TSM , TSM_train %>% select(TSM.Close))
- 
-# Lasso Regression Training
-lasso_train_res_TSM  <- predict(lasso_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close))
-lasso_train_res_TSM  <- bind_cols(lasso_train_res_TSM ,  TSM_train  %>% select(TSM.Close))
-
-# Elastic Net Training
-elastic_net_train_res_TSM  <- predict(elastic_net_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close ))
-elastic_net_train_res_TSM  <- bind_cols(elastic_net_train_res_TSM ,  TSM_train  %>% select(TSM.Close ))
-
-# k-Nearest Neighbors Training
-knn_train_res_TSM  <- predict(knn_fit_TSM , new_data =  TSM_train  %>% select(-TSM.Close ))
-knn_train_res_TSM  <- bind_cols(knn_train_res_TSM ,  TSM_train  %>% select(TSM.Close ))
-```
 
 ## Model Accuracies
 
 Root Mean Square Error (RMSE) results:
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       AMD = c((lm_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
+       AMD = c((linear_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
                     (lasso_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
                     (elastic_net_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
-                    (knn_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate ),
-       NVDA = c((lm_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (knn_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (random_forest_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate),
+       NVDA = c((linear_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
                     (ridge_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
                     (lasso_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
                     (elastic_net_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
-                    (knn_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate ),
-       INTC = c((lm_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (knn_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (random_forest_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_NVDA  %>% rmse( NVDA.Close, .pred))$.estimate),
+       INTC = c((linear_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
                     (ridge_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
                     (lasso_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
                     (elastic_net_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
-                    (knn_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate ),
-       TSM = c((lm_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (knn_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (random_forest_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_INTC  %>% rmse( INTC.Close, .pred))$.estimate),
+       TSM = c((linear_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
                     (ridge_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
                     (lasso_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
                     (elastic_net_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
-                    (knn_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate )
+                    (knn_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (random_forest_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_TSM  %>% rmse( TSM.Close, .pred))$.estimate)
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
@@ -1491,28 +1675,35 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
 R\^2 results:
 
 ```{r eval = TRUE, include=TRUE, warnings=FALSE}
-
-tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors"),
-       AMD = c((lm_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
+       AMD = c((linear_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
                     (lasso_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
                     (elastic_net_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
-                    (knn_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate ),
-       NVDA = c((lm_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (knn_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (random_forest_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_AMD  %>% rsq( AMD.Close, .pred))$.estimate),
+       NVDA = c((linear_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
                     (ridge_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
                     (lasso_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
                     (elastic_net_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
-                    (knn_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate ),
-       INTC = c((lm_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (knn_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (random_forest_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_NVDA  %>% rsq( NVDA.Close, .pred))$.estimate),
+       INTC = c((linear_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
                     (ridge_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
                     (lasso_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
                     (elastic_net_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
-                    (knn_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate ),
-       TSM = c((lm_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (knn_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (random_forest_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_INTC  %>% rsq( INTC.Close, .pred))$.estimate),
+       TSM = c((linear_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
                     (ridge_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
                     (lasso_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
                     (elastic_net_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
-                    (knn_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate )
+                    (knn_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (random_forest_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate,
+                    (boosted_trees_train_res_TSM  %>% rsq( TSM.Close, .pred))$.estimate)
        ) %>%
   kable() %>%
   kable_styling(full_width = F) %>%
