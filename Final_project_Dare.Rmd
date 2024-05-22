@@ -5,6 +5,7 @@ output:
   html_document:
     theme: united
     code_folding: hide
+    fig_caption: true
     toc: yes
     toc_float:
       collapsed: true
@@ -937,7 +938,7 @@ TSM_recipe = recipe(TSM.Close ~ TSM.Close_L1 + TSM.Close_L2 + TSM.Close_L3 + TSM
 
 ## k-Fold Cross Validation
 
-As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of _k-fold cross validation_ is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k \geq 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
+As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of _k-fold cross validation_ is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k \geq 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times, where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = AMD.Close)
@@ -948,13 +949,56 @@ TSM_folds  <- vfold_cv(TSM_train, v = 10, strata = TSM.Close)
 
 ## Define Workflows
 
+Despite the fact that our analysis is on how statistical learning models can predict semiconductor stocks, we have not actually described any particular statistical learning algorithms up to this point — this is where the modelling step comes in. Each of our models is equivalently its own statistical learning algorithm, with added hyperparameter tuning to distinguish certain algorithms from others (for example, ridge and lasso regression). For the scope of this project, we will explore the application of seven machine learning models:
+
+### Linear Regression
+
+<center>
+![Image taken from: https://medium.com/simple-ai/linear-regression-intro-to-machine-learning-6-6e320dbdaf06](./images/lin_reg_diagram.png){width=375px}
+</center>
+
+<br/>
+<br/>
+
+Our first and most basic model is that of standard linear regression; if we assume that our data follows a linear trend in terms of the predictors, the goal of linear regression is to find the best coefficients $\beta_i$ such that our outcome variable $Y$ can be described by
+$$
+Y = \beta_0 + \sum_{i=1}^p \beta_i \vec{X_i}
+$$
+This is typically done by minimizing the _residual sum of squares_
+$$
+\operatorname{RSS}=\sum_{i=1}^n (y_i - \sum_{j=1}^p \beta_j x_{ij})^2
+$$
+on our sample set. Though somewhat rudimentary compared to some of our other models, statistical learning through linear regression lends itself quite well to mechanistic models whenever there is some sort of linear relationship involved. In fact,  (linear) auto-regression is one of the most popular models to fine-tune for time series problems such as stock market predictions. However, linear regression does not always perform as well as some of our other algorithms for empirically-driven problems due to its strong linearity assumption.
+
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Linear Regression
 ############################
 linear_model <- linear_reg() %>%
   set_engine("lm")
+```
 
+
+### Ridge Regression
+
+A modified version of linear regression, ridge regression also attempts to fit sample data in a linear fashion subject to some additional constraints on the cost function. Instead of considering the usual residual sum of squares, a hyper-parameter $\lambda$ which penalizes higher slopes in our formula:
+$$
+\operatorname{RSS}_{\text{ridge}} = \sum_{i=1}^n (y_i - \sum_{j=1}^p \beta_j x_{ij})^2 + \lambda \sum_{i=1}^p \beta_i^2
+$$
+It turns out that $\lambda$ is precisely the Lagrange multiplier of the usual OLS minimization problem, now subject to the constraint $\sum_{i=1}^p \beta^2 < c$ for some $c > 0$ — geometrically this can be visualized as the intersection of our OLS level sets with the $p$-dimensional sphere of radius $\sqrt{c}$:
+
+<center>
+![Image taken from: https://online.stat.psu.edu/stat857/node/155/](./images/ridge_reg_diagram.png)
+</center>
+
+<br/>
+<br/>
+
+Ultimately this makes the coefficients in our ridge model harder to interpret, since they are biased towards zero; however, this also prevents overfitting, by preventing the training data from making any of our coefficients too large.
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Ridge Regression
 ############################
@@ -962,7 +1006,25 @@ ridge_model <- linear_reg(mixture = 0,
                          penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
+```
 
+
+
+### Lasso Regression
+
+Also known as $L^1$ regression, Lasso regression is very similar to ridge regression in the sense that it modifies the usual cost function in linear regression with a penalty term. The difference (as the name $L^1$ regression suggests) is that the penalty term is now taken over the Hilbert space $L^1(\mathbb{R}, \mu)$, as opposed to $L^2(\mathbb{R}, \mu)$ for ridge regression.
+$$
+\operatorname{RSS}_{\text{Lasso}} = \sum_{i=1}^n (y_i - \sum_{j=1}^p \beta_j x_{ij})^2 + \lambda \sum_{i=1}^p |\beta_i|
+$$
+
+For those familiar with the theory of metric spaces, optimizing $\operatorname{RSS}_{\text{Lasso}}$ can be geometrically interpreted as finding where the usual OLS level sets intersect the unit circle with respect to the taxicab metric. 
+
+<center>
+![Image taken from: https://favtutor.com/blogs/ridge-and-lasso-regression](./images/lasso_reg_diagram.png){width=375px}
+</center>
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Lasso Regression
 ############################
@@ -970,7 +1032,18 @@ lasso_model <- linear_reg(mixture = 1,
                          penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
+```
 
+### Elastic Net Regularization
+
+Elastic net regularization is effectively the linear interpolation of ridge regression and lasso regression. By introducing a new parameter $\alpha \in [0, 1]$, we may combine the above two penalty terms via
+$$
+\operatorname{RSS}_{\text{EN}} = \sum_{i=1}^n (y_i - \sum_{j=1}^p \beta_j x_{ij})^2 + \lambda \big( \alpha \sum_{i=1}^p |\beta_i| + (1-\alpha) \sum_{i=1}^p \beta_i^2 \big)
+$$
+This ultimately allows us to combine the strengths of both lasso and ridge regression over regular regression, such as handling both high dimensional data and significant collinearity. In addition, with the right grid of hype-parameter values, we can generally expect that elastic net will perform just as well as lasso and ridge (if not better).
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Elastic Net
 ############################
@@ -978,14 +1051,37 @@ elastic_net_model <- linear_reg(mixture = tune(),
                               penalty = tune()) %>%
   set_mode("regression") %>%
   set_engine("glmnet")
+```
 
+
+### k-Nearest Neighbors
+
+Ultimately all of our regression models above assume some sort of functional (i.e. linear) form of a relationship between our predictors and outcome — that is, they are all parametric models. $k$-Nearest neighbors is our first example of a non-parametric model, in the sense that it does not make any prior assumptions about the relationship between our outcome and data. This ultimately makes $k$-nearest neighbors a much more viable option for predicting empirically-driven processes as well as classification problems; however, it should be noted that $k$-nearest neighbors is not commonly used with time-series problems (as there is often a very direct relationship with a predictor and its lag variables).
+
+The idea behind $k$-nearest neighbors, however, is exactly what the name suggests: assuming we are able to establish some sort of metric space structure on our underlying data-set, we predict the outcome of a new data point based on the $k$ nearest labelled values. For classification problems, this is done by assigning the class with the highest number of occurrences among the $k$ nearest neighbors; for regression, several techniques such as weighted averages can be used.
+
+<center>
+![Image taken from: https://www.researchgate.net/figure/k-nearest-neighbor-diagram-When-the-value-of-k-is-different-the-samples-are-judged_fig1_339345022](./images/knn_diagram.png){width=375px}
+</center>
+
+<br/>
+<br/>
+One immediate observation that can be drawn from the above picture is that the performance of $k$-nearest neighbors seems to depend on the number $k$ of neighbors taken into consideration. We will see in the next sections that this is absolutely the case, and we will ultimately need to vary $k$ as a hyperparameter by testing it against an array of models with varying values of $k \geq 1$.
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for k-Nearest Neighbors
 ############################
 knn_model <- nearest_neighbor(neighbors = tune()) %>%
   set_engine("kknn") %>%
   set_mode("regression")
+```
 
+### Random Forest
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Random Forest
 ############################
@@ -994,7 +1090,11 @@ random_forest_model <- rand_forest(mtry = tune(),
                        min_n = tune()) %>% 
   set_engine("ranger", importance = "impurity") %>% 
   set_mode("regression")
+```
 
+### Boosted Trees
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Model for Boosted Trees
 ############################
@@ -1004,6 +1104,9 @@ boosted_trees_model <- boost_tree(mtry = tune(),
   set_engine("xgboost") %>% 
   set_mode("regression")
 ```
+
+
+With all seven of our statistical learning algorithms fixed (along with `tune()` applied to relevant hyperparameters), we are now able to load the models and recipes into workflows. Workflows are objects introduced by the `tidymodels` package that allows us to keep track of all pre-processing and modelling simultaneously, and will be particularly useful in minimizing the number of objects to keep track of since we will be dealing with seven models for each of our four stocks. 
 
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
