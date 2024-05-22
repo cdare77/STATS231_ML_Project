@@ -14,7 +14,7 @@ date: "2024-05-10"
 
 # Introduction
 
-With the growing presence of technology in our society, there is an rapidly increasing demand for hardware which supports our heavy computational demands. One of the most important pieces of computer hardware for computationally-intensive tasks is Graphics Processing Units (GPU) due to their ability to handle a wide range of parallel processing tasks — this has made them an invaluable resource for companies pursing any sort of Artificial Intelligence (AI), super-computing, crypto-currencies, or computer graphics. Consequently, companies which manufacture processing chips have been a focal point for investors in recent years, as they directly control the output capabilities for a large portion of the technology sector.
+With the growing presence of technology in our society, there is an rapidly increasing demand for hardware which supports our computational needs. One of the most important pieces of hardware for these computationally-intensive tasks is Graphics Processing Units (GPU) due to their ability to handle parallel processing with ease — this has made them an invaluable resource for companies pursing any sort of artificial intelligence (AI), super-computing, cryptocurrency mining, or computer graphics. For example, most individuals are likely familiar with companies such as Meta, Snapchat, and Amazon which are at the forefront of the technology industry; while these stocks are a blue chip in any investor's portfolio, one should recognize that the performance of each of these companies largely depends on their ability to process a large amount of users' data (i.e. supercomputing). Consequently, companies which manufacture processing chips have been a focal point for investors in recent years, as they directly control the output capabilities for a large portion of the technology sector. 
 
 The purpose of this project is to attempt to predict the price-trends of a semiconductor stock - in fact, there are actually four stocks we wish to predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the project guideline of applying a variety of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most useful for stock market prediction (in the case of semiconductor stocks). Put differently, if we only applied our statistical learning models to a single stock resulting in an optimal model $M$, this would naturally raise the question of whether $M$ fits the stock best because it is optimal for stock market predictions, or if it fits the stock best due to the stock's characteristics. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models , ranging from standard regression to more non-linear models like random forest learning and k-Nearest neighbors.
 
@@ -1225,27 +1225,28 @@ boosted_trees_wflow_TSM <- workflow() %>%
 
 ## Tuning Hyperparameters
 
-Set up Grids:
+The fact that the majority of our models have additional parameters (i.e. $k$ for $k$-nearest neighbors, $\alpha$ for elastic net) is a bit of a double-edged sword: it adds a significant amount of flexibility to our models, but now begs the question of "what values of these additional parameters gives us the best results?" Unfortunately there is often no universal answer which applies to all data-sets. As a result, finding optimal hyperparameter values often feels like navigating through a dark room with our bare hands — we don't really know where to start, so we blindly go forward until we stumble on something. Though this is a bit of an exaggeration (as there are mathematically rigorous estimates, such as searching near $k = \sqrt{\# \text{samples}}$ for $k$-nearest neighbors), it can certainly feel like the case when a considerable portion of our computational runtime comes from throwing grid-search at each model.
+
+The upshot of tuning hyperparameters is that it is quite easy to understand: we naïvely just punch in a bunch of values (within some predetermined interval) for each hyperparameter and see what happens with that model. In a certain sense, the difficult part is figuring out what interval gives us enough room for an optimized model without turning the computational complexity into a travelling-salesman problem. For both our regression and $k$-nearest neighbors, we simply iterate over the default values (spaced by a log base-10 scaling); for random forest and boosted trees, a bit of trial-and-error was required to see which hyperparameters led to a decrease in training root mean square error (RMSE).
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Define Grid for Ridge AND Lasso Regression
 ############################
-lambda_grid <- grid_regular(penalty(),
-                            levels = 50)
+lambda_grid <- grid_regular(penalty( range=c(0,1500), trans = identity_trans()  ),
+                            levels = 100)
 
 ############################
 # Define Grid for Elastic Net
 ############################
-elastic_net_grid <- grid_regular(penalty(range = c(0, 1),
-                                     trans = identity_trans()),
-                        mixture(range = c(0, 1)),
-                             levels = 10)
+elastic_net_grid <- grid_regular(penalty(range=c(0,1500), trans = identity_trans()), mixture(),
+                             levels = 21)
 
 ############################
 # Define Model for k-Nearest Neighbors
 ############################
-knn_grid <- grid_regular(neighbors(),
-                         levels = 10)
+knn_grid <- grid_regular(neighbors(range=c(1,145)),
+                         levels = 145)
 
 ############################
 # Define Model for Random Forest
@@ -1264,6 +1265,7 @@ boosted_trees_grid <- grid_regular(mtry(range = c(1, 8)),
                         levels = 5)
 ```
 
+The most computationally-intensive part of this entire analysis is searching for the optimal hyperparameter values within the grids we have defined above. In order to run this computation as few times as possible, we save our results to 24 different `.rda` files using the built-in `save` function and instead try to reference them via `load`. 
 
 
 ```{r eval = FALSE, include=TRUE, warning=FALSE}
@@ -1441,12 +1443,10 @@ save(boosted_trees_tune_NVDA, file = "tuned_grids/boosted_trees_tune_NVDA.rda")
 save(boosted_trees_tune_INTC, file = "tuned_grids/boosted_trees_tune_INTC.rda")
 save(boosted_trees_tune_TSM, file = "tuned_grids/boosted_trees_tune_TSM.rda")
 ```
- 
-With the results of our grid search saved locally (for each model across all four stocks), we are able to visualize how the accuracy of our models changes as we vary the value of our hyper-parameters. 
+
+One benefit of running such a broad search is that we gather much more information on our models' dependencies on their hyperparameters than theoretically would be needed to find an optimal model. Regardless, with this information in hand (for each model across all four stocks) we are able to visualize how the accuracy of our models changes as we vary the value of these parameters:
 
 
-
- 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Ridge Regression grids
 load("tuned_grids/ridge_tune_AMD.rda")
@@ -1455,8 +1455,13 @@ load("tuned_grids/ridge_tune_INTC.rda")
 load("tuned_grids/ridge_tune_TSM.rda")
 
 autoplot(ridge_tune_AMD) + ggtitle("Ridge Regression AMD") + theme_dark()
-autoplot(ridge_tune_NVDA) + ggtitle("Ridge Regression NVDA") + theme_dark()
+autoplot(ridge_tune_INTC) + ggtitle("Ridge Regression NVDA") + theme_dark()
 ```
+
+For our ridge regression models, it's difficult to get an accurate picture of how the root mean square error (RMSE) depends on the regularization until the amount of regularization is taken to be significantly large — in fact, we hand to change the range of the `penalty()` parameter in our grid from $0 \leq lambda \leq 5$ to $0 \leq \lambda \leq 1500$ to even obtain any noticeable affect for the NVIDIA stock. However, this is likely due to the fact that the closing price (and thus the regression coefficients) of NVDA are significantly larger than the other three stocks, meaning a larger value of $\lambda$ is needed for the $\lambda \sum_{i=1}^p \beta_i^2$ term to dominate the modified $\operatorname{RSS}_{\text{Ridge}}$.
+
+Though modifying our grid search for the purpose of visualizing the trend between regularization and RMSE means we will not have as accurate of a "best model" resulting from the grid search, it will ultimately not affect our process of selecting the best two models for our testing data (trial and error across a variety of parameters for `grid_regular` show that elastic search and regular linear regression effectively always perform better).
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Lasso Regression grids
 load("tuned_grids/lasso_tune_AMD.rda")
@@ -1468,6 +1473,8 @@ autoplot(lasso_tune_AMD) + ggtitle("Lasso Regression AMD") + theme_dark()
 autoplot(lasso_tune_NVDA) + ggtitle("Lasso Regression NVDA") + theme_dark()
 ```
 
+While the difference between the penalty terms of lasso and ridge may have seemed negligible at first, we see from the above plots that the $L^1$ norm has a significantly larger impact on the penalty term of our regression models than the $L^2$ norm does. In particular, the $L^1$ error terms of lasso seems to be significantly more sensitive to increases in our regularization parameter $\lambda$, and seems to approach a maximal RMSE value significantly quicker than ridge regression does.
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE, message=FALSE, fig.show="hold", out.width="50%"}
  # Load tuned Elastic Net grids
 load("tuned_grids/elastic_net_tune_AMD.rda")
@@ -1478,6 +1485,8 @@ load("tuned_grids/elastic_net_tune_TSM.rda")
 autoplot(elastic_net_tune_AMD) + ggtitle("Elastic Net AMD") + theme_dark()
 autoplot(elastic_net_tune_NVDA) + ggtitle("Elastic Net NVDA") + theme_dark()
 ```
+We are also now able to visualize quite plainly how elastic net interpolates the penalty terms of ridge and lasso regression. For example, the blue/purple/pink curves displayed on the NVDA plot behave effectively the same as the lasso regression since the RMSE quickly increases around $\lambda = 100$ towards the same asymptotic value.
+
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned k-Nearest Neighbors grids
@@ -1486,9 +1495,11 @@ load("tuned_grids/knn_tune_NVDA.rda")
 load("tuned_grids/knn_tune_INTC.rda")
 load("tuned_grids/knn_tune_TSM.rda")
 
-autoplot(knn_tune_AMD) + ggtitle("k-Nearest Neighbors AMD") + theme_dark()
+autoplot(knn_tune_TSM) + ggtitle("k-Nearest Neighbors AMD") + theme_dark()
 autoplot(knn_tune_NVDA) + ggtitle("k-Nearest Neighbors NVDA") + theme_dark()
 ```
+For $k$-Nearest neighbors, we additionally see that the optimal choices of $k$ (i.e. the local minima on the graphs above) do occur _somewhat_ close to the square root of the number of sample sizes (i.e. roughly 15 in this case). However, the positive relationship between $k$ and our RMSE value shows smaller values of $k$ are still favored — in fact, the optimal values of $k$ vary between $2 \leq k \leq 6$ for all four of our stocks. 
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned Random Forest grids
 load("tuned_grids/random_forest_tune_AMD.rda")
@@ -1509,11 +1520,12 @@ load("tuned_grids/boosted_trees_tune_TSM.rda")
 autoplot(boosted_trees_tune_AMD) + theme_dark() + ggtitle("Boosted Trees AMD") + theme(text = element_text(size = 9))
 autoplot(boosted_trees_tune_NVDA) + theme_dark() + ggtitle("Boosted Trees NVDA") + theme(text = element_text(size = 9))
 ```
+<br/>
+<br/>
+<br/>
 
+Though having a vast amount of data about the relationship between our hyperparameters and training accuracy is useful for better understanding each model, we ultimately only care about which exact hyperparameter values give us the best results (according to some chosen metrics). Using the `select_best()` function from our `tidymodels` package, we need only specify the metric we care most about in order to extract the optimal model for each of our seven statistical learning algorithms, thus concluding the hyperparameter tuning portion of this analysis.
 
-
-
-Finalize Workflows
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Select best model(s) for Ridge Regression
@@ -1590,6 +1602,8 @@ boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "
 
 # Performance of Models
 
+After an arduous process of tuning each of our seven models across all four stocks, we now have an array of workflows that should be well-primed for our entire set of training data (remember that the hyperparameter tuning was done on 10 folds of the training data, so each model has only seen $9/10^{th}$ of it). Ultimately, the performance of our models on the the entire training set (exactly $1/10^{th}$ of which is unseen by the models) need not give any indication about the performance of these models on unseen testing data; regardless, we will use this as a benchmark for which two models pass on to the testing data.
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
 # Fit model(s) for Linear Regression
@@ -1651,19 +1665,41 @@ boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 
 ## Variable Importance
 
+Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is needed to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-base statistical learning algorithms regarding which variables affect the outcome of our model most heavily. For example, we can plot the _variable importance plots_ for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is actually a slight difference in terms of which varaible is considered most relevant for predicting stock price:
+
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+random_forest_fit_AMD %>% extract_fit_parsnip() %>% 
+  vip() 
+
 boosted_trees_fit_AMD %>% extract_fit_parsnip() %>% 
+  vip() 
+```
+It should be noted that the horizontal axis scaling should be ignored since we are comparing the variable importance plots (VIPs) between two distinct tree algorithms. Though there is a slight difference between the ordering of the variables, we still see that the 1-day lag variable (i.e. the information from the previous day) is still one of the most important pieces of information between the two stocks. This may lead one to believe that 'short-term' lag variables will always take precedence over 'long-term' variables in these time-series based problems — however, looking at the VIPs for NVDA below, we see that the first lag variable doesn't even appear in the top 50% of most important variables for the random forest algorithm. 
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+random_forest_fit_NVDA %>% extract_fit_parsnip() %>% 
   vip() 
 
 boosted_trees_fit_NVDA %>% extract_fit_parsnip() %>% 
   vip() 
 ```
+It is also worth considering the case that the periodicity of the NVDA stock (i.e. dependence on 6-7 day old data) may simply be a feature of our sample of data-set. For example, the importance of variables for our INTC and TSM stocks seem to be much closer to what a typical investor would choose to scrutinize in order to predict a stocks closing price. 
+
+
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+random_forest_fit_INTC %>% extract_fit_parsnip() %>% 
+  vip() 
+
 boosted_trees_fit_INTC %>% extract_fit_parsnip() %>% 
   vip() 
 
+random_forest_fit_TSM %>% extract_fit_parsnip() %>% 
+  vip() 
+
 boosted_trees_fit_TSM %>% extract_fit_parsnip() %>% 
-  vip()
+  vip() 
 ```
 
 ## Training Accuracy
