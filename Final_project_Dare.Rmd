@@ -16,7 +16,7 @@ date: "2024-05-10"
 
 With the growing presence of technology in our society, there is an rapidly increasing demand for hardware which supports our computational needs. One of the most important pieces of hardware for these computationally-intensive tasks is Graphics Processing Units (GPU) due to their ability to handle parallel processing with ease — this has made them an invaluable resource for companies pursing any sort of artificial intelligence (AI), super-computing, cryptocurrency mining, or computer graphics. For example, most individuals are likely familiar with companies such as Meta, Snapchat, and Amazon which are at the forefront of the technology industry; while these stocks are a blue chip in any investor's portfolio, one should recognize that the performance of each of these companies largely depends on their ability to process a large amount of users' data (i.e. supercomputing). Consequently, companies which manufacture processing chips have been a focal point for investors in recent years, as they directly control the output capabilities for a large portion of the technology sector. 
 
-The purpose of this project is to attempt to predict the price-trends of a semiconductor stock - in fact, there are actually four stocks we wish to predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the project guideline of applying a variety of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most useful for stock market prediction (in the case of semiconductor stocks). Put differently, if we only applied our statistical learning models to a single stock resulting in an optimal model $M$, this would naturally raise the question of whether $M$ fits the stock best because it is optimal for stock market predictions, or if it fits the stock best due to the stock's characteristics. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models , ranging from standard regression to more non-linear models like random forest learning and k-Nearest neighbors.
+The purpose of this project is to attempt to predict the price-trends of a semiconductor stock - in fact, there are actually four stocks we wish to predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the project guideline of applying a variety of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most effective for stock market prediction (at least in the case of semiconductor stocks). Put differently, if we found that a particular statistical learning model was the best fit a some stock, this would naturally raise the question of whether that is due to a characteristic of the model or a characteristic of the stock. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models, ranging from standard regression to more non-linear models like random forest and k-Nearest neighbors.
 
 # Loading Packages and Data
 
@@ -326,15 +326,18 @@ simple_moving_average <- function(my_vec, lag_period) {
  
   # return variable
   output_vec = c()
-  for (i in 1:length(my_vec)) {
+  output_vec[1] = my_vec[1]
+  output_vec[2] = my_vec[2]
+  
+  for (i in 3:length(my_vec)) {
     # If there are less that lag_period of data previous to the current date,
     # simply take the average of all the days prior to get the closest thing
     # to a running average
-    if (i <= lag_period){
-      output_vec[i] = mean(my_vec[1:i])
+    if (i <= lag_period + 1){
+      output_vec[i] = mean(my_vec[1:(i-1)])
     }
     else {
-      output_vec[i] = mean(my_vec[(i-lag_period + 1):i])
+      output_vec[i] = mean(my_vec[(i-lag_period):(i-1)])
     }
   }
   return(output_vec)
@@ -520,16 +523,17 @@ exponential_moving_average <- function(my_vec, lag_period) {
  
   output_vec <- c()
   output_vec[1] <- my_vec[1]
+  output_vec[2] <- my_vec[1]
   smoothing_factor = 2/(lag_period+1)
-  for (i in 2:length(my_vec)) {
+  for (i in 3:length(my_vec)) {
     # If there are less that lag_period of data previous to the current date,
     # simply take the average of all the days prior to get the closest thing
     # to a running average
-    if (i <= lag_period){
-      output_vec[i] = exponential_moving_average_helper(my_vec[1:i], i, 2/(i + 1))
+    if (i <= (lag_period+1)){
+      output_vec[i] = exponential_moving_average_helper(my_vec[1:(i-1)], i, 2/(i + 1))
     }
     else {
-      output_vec[i] = exponential_moving_average_helper(my_vec[(i-lag_period + 1):i], lag_period, smoothing_factor)
+      output_vec[i] = exponential_moving_average_helper(my_vec[(i-lag_period ):(i-1)], lag_period, smoothing_factor)
     }
   }
   
@@ -675,16 +679,17 @@ simple_moving_deviation <- function(my_vec, lag_period) {
   # at 2 prevents a divide by 0 error without adding an additional if-else branch
   # in the loop
   output_vec[1] = 0
-  for (i in 2:length(my_vec)) {
+  output_vec[2] = 0
+  for (i in 3:length(my_vec)) {
     
     # If there are less that lag_period of data previous to the current date,
     # simply take the average of all the days prior to get the closest thing
     # to a running average
-    if (i <= lag_period){
-       output_vec[i] = sd(my_vec[1:i])
+    if (i <= lag_period+1){
+       output_vec[i] = sd(my_vec[1:(i-1)])
     }
     else {
-      output_vec[i] = sd(my_vec[(i-lag_period+1):i])
+      output_vec[i] = sd(my_vec[(i-lag_period):(i-1)])
     }
   }
   return(output_vec)
@@ -1458,7 +1463,7 @@ autoplot(ridge_tune_AMD) + ggtitle("Ridge Regression AMD") + theme_dark()
 autoplot(ridge_tune_INTC) + ggtitle("Ridge Regression NVDA") + theme_dark()
 ```
 
-For our ridge regression models, it's difficult to get an accurate picture of how the root mean square error (RMSE) depends on the regularization until the amount of regularization is taken to be significantly large — in fact, we hand to change the range of the `penalty()` parameter in our grid from $0 \leq lambda \leq 5$ to $0 \leq \lambda \leq 1500$ to even obtain any noticeable affect for the NVIDIA stock. However, this is likely due to the fact that the closing price (and thus the regression coefficients) of NVDA are significantly larger than the other three stocks, meaning a larger value of $\lambda$ is needed for the $\lambda \sum_{i=1}^p \beta_i^2$ term to dominate the modified $\operatorname{RSS}_{\text{Ridge}}$.
+For our ridge regression models, it's difficult to get an accurate picture of how the root mean square error (RMSE) depends on the regularization until the amount of regularization is taken to be significantly large — in fact, we hand to change the range of the `penalty()` parameter in our grid from $0 \leq \lambda \leq 5$ to $0 \leq \lambda \leq 1500$ to even obtain any noticeable affect for the NVIDIA stock. However, this is likely due to the fact that the closing price (and thus the regression coefficients) of NVDA are significantly larger than the other three stocks, meaning a larger value of $\lambda$ is needed for the $\lambda \sum_{i=1}^p \beta_i^2$ term to dominate the modified $\operatorname{RSS}_{\text{Ridge}}$.
 
 Though modifying our grid search for the purpose of visualizing the trend between regularization and RMSE means we will not have as accurate of a "best model" resulting from the grid search, it will ultimately not affect our process of selecting the best two models for our testing data (trial and error across a variety of parameters for `grid_regular` show that elastic search and regular linear regression effectively always perform better).
 
@@ -1602,7 +1607,7 @@ boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "
 
 # Performance of Models
 
-After an arduous process of tuning each of our seven models across all four stocks, we now have an array of workflows that should be well-primed for our entire set of training data (remember that the hyperparameter tuning was done on 10 folds of the training data, so each model has only seen $9/10^{th}$ of it). Ultimately, the performance of our models on the the entire training set (exactly $1/10^{th}$ of which is unseen by the models) need not give any indication about the performance of these models on unseen testing data; regardless, we will use this as a benchmark for which two models pass on to the testing data.
+After an arduous process of tuning each of our seven models across all four stocks, we now have an array of workflows that should be well-primed for our entire set of training data (remember that the hyperparameter tuning was done on 10-fold cross validation, so each model has only seen $9/10^{th}$ of the data ). Ultimately, the performance of our models on the the entire training set (exactly $1/10^{th}$ of which is unseen by the models) need not give any indication about the performance of these models on unseen testing data; regardless, we will use this as a benchmark for which two models pass on to the testing data.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1665,7 +1670,7 @@ boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 
 ## Variable Importance
 
-Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is needed to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-base statistical learning algorithms regarding which variables affect the outcome of our model most heavily. For example, we can plot the _variable importance plots_ for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is actually a slight difference in terms of which varaible is considered most relevant for predicting stock price:
+As a brief aside, with the models fit we now have all the information necessary to examine how much impact each predictor has. Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is required to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-base statistical learning algorithms regarding which variables affect the outcome of our model most heavily. For example, we can plot the _variable importance plots_ for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is actually a slight difference in terms of which variable is considered most relevant for predicting stock price:
 
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
@@ -1703,6 +1708,8 @@ boosted_trees_fit_TSM %>% extract_fit_parsnip() %>%
 ```
 
 ## Training Accuracy
+
+Returning to the topic of our models' performance, in order to gather any sort of insight about the accuracy of our models we must first keep track of the difference between their predictions and the actual values of labelled data. While there are likely better ways to store the results so that labelled training data isn't getting replicated in memory 7 times (for each stock, in fact), the most convenient way to keep track of these differences is simply attaching a $2 \times (\#\ \text{of}\ \text{training}\ \text{observations})$ matrix to each model:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1790,7 +1797,7 @@ boosted_trees_train_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_
                                 bind_cols(TSM_train  %>% select(TSM.Close ))
 ```
 
-Root Mean Square Error (RMSE) results:
+Using the `yardstick` package, we are then able to feed each model's matrix of predicted versus actual outcomes through the `rmse()` function to create a succinct table of the root mean squared error on the training data:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
@@ -1827,7 +1834,7 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
   kable_styling(full_width = F)
 ```
 
-$R^2$ results:
+Though of slightly less importance, we may also pipe the same data through the $R^2$ metric to see that effectively all of our models accurately describe the variance in the closing price of each stock: 
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
@@ -1865,7 +1872,11 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
 ```
 
 
+Based on the two tables, we see that there is a clear choice for the two best performing models: linear regression and boosted trees. However, there do also seem to be some issues with linear regression in the case of the INTC stock: if our linear regression was able to perfectly match the training data, either the recipe is overfitting or the `lm` engine (responsible for our model's fit) is running into some computational errors. If overfitting is the case, then this will likely come into light when we apply the linear regression model to our training data; in either case, the performance across the other three stocks is enough to justify choosing the model for our testing data.
+
 ## Best Models and Testing Performance
+
+Applying the same rudimentary procedure to our testing data, we store the predicted versus actual outcomes of the testing data in a series of $2 \times N_{\text{test}}$ matrices (where $N_{\text{test}}$ is the size of our testing data set).
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1880,10 +1891,8 @@ linear_test_res_INTC  <- predict(linear_fit_INTC, new_data = INTC_test %>% selec
 linear_test_res_TSM  <- predict(linear_fit_TSM, new_data = TSM_test %>% select(-TSM.Close)) %>%
                           bind_cols(TSM_test %>% select(TSM.Close))
  
- 
-
 ############################
-# Use Booested Trees Fit to Predict Testing Data
+# Use Boosted Trees Fit to Predict Testing Data
 ############################
 boosted_trees_test_res_AMD  <- predict(boosted_trees_fit_AMD , new_data =  AMD_test  %>% select(-AMD.Close )) %>% 
                                 bind_cols(AMD_test  %>% select(AMD.Close ))
@@ -1896,7 +1905,6 @@ boosted_trees_test_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_t
 ```
 
 
-Root Mean Square Error (RMSE) results:
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Boosted Trees"),
        AMD = c((linear_test_res_AMD  %>% rmse( AMD.Close, .pred))$.estimate,
@@ -1912,7 +1920,7 @@ tibble(Model = c("Linear Regression", "Boosted Trees"),
   kable_styling(full_width = F)
 ```
 
-$R^2$ results:
+Although linear regression and boosted trees perform nearly the same on the training data, there is a clear victor between the two models when introduced to unseen data. This likely indicates that the boosted trees model was simply fitting the training data, while the linear regression correctly identified the underlying linear relationships between the predictors and the outcome. 
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 tibble(Model = c("Linear Regression", "Boosted Trees"),
@@ -1931,4 +1939,1313 @@ tibble(Model = c("Linear Regression", "Boosted Trees"),
 
 
 
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+######################
+#  Set up data for dataframes for AMD stock for predicting and comparing
+######################
+# STORE ACTUAL CLOSING VALUES AND VOLUMES
+a <- loadSymbols("AMD", from="2023-11-20", to="2024-01-30")
+my_dates2 <- index(AMD)
+AMD2 <- data.frame(AMD)
+AMD2$AMD.Date <- my_dates2
+
+# INITIAL TABLE TO START PREDICTING AFTER / ADDING ENTRIES TO
+a <- loadSymbols("AMD", from="2023-11-20", to="2024-01-02")
+my_dates <- index(AMD)
+AMD <- data.frame(AMD)
+AMD$AMD.Date <- my_dates
+
+# Re-Add Lag variables
+AMD$AMD.Close_L1 <- lag(AMD$AMD.Close, 1)
+AMD$AMD.Close_L2 <- lag(AMD$AMD.Close, 2)
+AMD$AMD.Close_L3 <- lag(AMD$AMD.Close, 3)
+AMD$AMD.Close_L4 <- lag(AMD$AMD.Close, 4)
+AMD$AMD.Close_L5 <- lag(AMD$AMD.Close, 5)
+AMD$AMD.Close_L6 <- lag(AMD$AMD.Close, 6)
+AMD$AMD.Close_L7 <- lag(AMD$AMD.Close, 7)
+AMD$AMD.Close_L8 <- lag(AMD$AMD.Close, 8)
+AMD$AMD.Close_L9 <- lag(AMD$AMD.Close, 9)
+AMD$AMD.Close_L10 <- lag(AMD$AMD.Close, 10)
+# Fill in NA entries in beginning of lag variables
+AMD <- AMD %>%
+  fill(AMD.Close_L1, .direction = "up") %>%
+  fill(AMD.Close_L2, .direction = "up") %>%
+  fill(AMD.Close_L3, .direction = "up") %>% 
+  fill(AMD.Close_L4, .direction = "up") %>% 
+  fill(AMD.Close_L5, .direction = "up") %>% 
+  fill(AMD.Close_L6, .direction = "up") %>% 
+  fill(AMD.Close_L7, .direction = "up") %>% 
+  fill(AMD.Close_L8, .direction = "up") %>% 
+  fill(AMD.Close_L9, .direction = "up") %>% 
+  fill(AMD.Close_L10, .direction = "up") 
+
+# Obtain four simple moving averages of AMD
+AMD$AMD.SMA_cl_1W <- simple_moving_average(AMD$AMD.Close, 5)
+AMD$AMD.SMA_cl_2W <- simple_moving_average(AMD$AMD.Close, 10)
+AMD$AMD.SMA_cl_1M <- simple_moving_average(AMD$AMD.Close, 20)
+AMD$AMD.SMA_cl_2M <- simple_moving_average(AMD$AMD.Close, 40)
+# Compute Exponential moving average for AMD
+AMD$AMD.EMA_cl_1W <- exponential_moving_average(AMD$AMD.Close, 5)
+AMD$AMD.EMA_cl_2W <- exponential_moving_average(AMD$AMD.Close, 10)
+AMD$AMD.EMA_cl_1M <- exponential_moving_average(AMD$AMD.Close, 20)
+AMD$AMD.EMA_cl_2M <- exponential_moving_average(AMD$AMD.Close, 40)
+# Compute the simple moving deviation of AMD
+AMD$AMD.SMD_cl_1W <- simple_moving_deviation(AMD$AMD.Close, 5)
+AMD$AMD.SMD_cl_2W <- simple_moving_deviation(AMD$AMD.Close, 10)
+AMD$AMD.SMD_cl_1M <- simple_moving_deviation(AMD$AMD.Close, 20)
+AMD$AMD.SMD_cl_2M <- simple_moving_deviation(AMD$AMD.Close, 40)
+# Compute the MACD
+AMD$AMD.MACD = (AMD$AMD.EMA_cl_2W - AMD$AMD.EMA_cl_1M)
+
+#######################
+# Begin iteratively adding predictions using linear regression
+#######################
+# Our AMD and AMD2 should align on the initial N days
+AMD$AMD.Actual <- AMD$AMD.Close
+# buffer variable to store predictions in
+pred <- AMD$AMD.Close
+N <- length(my_dates)
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional AMD2 dataframe
+  new_vol <- AMD2$AMD.Volume[(N+i)]
+  actual_value <- AMD2$AMD.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  AMD[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value)
+
+  # predict next row, store in buffer variable
+  pred <- predict(linear_fit_AMD, new_data = AMD %>% select(-AMD.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  AMD$AMD.Close[N+i] <- pred[N+i]
+}
+
+# Store results of linear regression in a different buffer
+linear_pred <- AMD$AMD.Close
+
+#######################
+# Begin iteratively adding predictions for Elastic Net
+#######################
+
+# buffer variable to store predictions in
+pred <- (AMD %>% slice(1:N))$AMD.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional AMD2 dataframe
+  new_vol <- AMD2$AMD.Volume[(N+i)]
+  actual_value <- AMD2$AMD.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  AMD[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(elastic_net_fit_AMD, new_data = AMD %>% select(-AMD.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  AMD$AMD.Close[N+i] <- pred[N+i]
+}
+
+elastic_net_pred <- AMD$AMD.Close
+
+#######################
+# Begin iteratively adding predictions for k-Nearest Neighbors
+#######################
+
+# buffer variable to store predictions in
+pred <- (AMD %>% slice(1:N))$AMD.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional AMD2 dataframe
+  new_vol <- AMD2$AMD.Volume[(N+i)]
+  actual_value <- AMD2$AMD.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  AMD[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(knn_fit_AMD, new_data = AMD %>% select(-AMD.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  AMD$AMD.Close[N+i] <- pred[N+i]
+}
+
+knn_pred <- AMD$AMD.Close
+
+#######################
+# Begin iteratively adding predictions for Random Forest
+#######################
+
+# buffer variable to store predictions in
+pred <- (AMD %>% slice(1:N))$AMD.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional AMD2 dataframe
+  new_vol <- AMD2$AMD.Volume[(N+i)]
+  actual_value <- AMD2$AMD.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  AMD[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(random_forest_fit_AMD, new_data = AMD %>% select(-AMD.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  AMD$AMD.Close[N+i] <- pred[N+i]
+}
+
+random_forest <- AMD$AMD.Close
+
+#######################
+# Begin iteratively adding predictions for Boosted Trees
+#######################
+
+# buffer variable to store predictions in
+pred <- (AMD %>% slice(1:N))$AMD.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional AMD2 dataframe
+  new_vol <- AMD2$AMD.Volume[(N+i)]
+  actual_value <- AMD2$AMD.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  AMD[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(boosted_trees_fit_AMD, new_data = AMD %>% select(-AMD.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  AMD$AMD.Close[N+i] <- pred[N+i]
+}
+
+boosted_trees <- AMD$AMD.Close
+
+
+# re-add results of linear regression from buffer into new variable
+AMD$AMD.Linear_Pred <- linear_pred
+AMD$AMD.Elastic_Net_Pred <- elastic_net_pred
+AMD$AMD.KNN_Pred <- knn_pred
+AMD$AMD.Random_Forest_Pred <- random_forest
+AMD$AMD.Boosted_Trees_Pred <- boosted_trees
+```
+
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+######################
+#  Set up data for dataframes for NVDA stock for predicting and comparing
+######################
+# STORE ACTUAL CLOSING VALUES AND VOLUMES
+a <- loadSymbols("NVDA", from="2023-11-20", to="2024-01-30")
+my_dates2 <- index(NVDA)
+NVDA2 <- data.frame(NVDA)
+NVDA2$NVDA.Date <- my_dates2
+
+# INITIAL TABLE TO START PREDICTING AFTER / ADDING ENTRIES TO
+a <- loadSymbols("NVDA", from="2023-11-20", to="2024-01-02")
+my_dates <- index(NVDA)
+NVDA <- data.frame(NVDA)
+NVDA$NVDA.Date <- my_dates
+
+# Re-Add Lag variables
+NVDA$NVDA.Close_L1 <- lag(NVDA$NVDA.Close, 1)
+NVDA$NVDA.Close_L2 <- lag(NVDA$NVDA.Close, 2)
+NVDA$NVDA.Close_L3 <- lag(NVDA$NVDA.Close, 3)
+NVDA$NVDA.Close_L4 <- lag(NVDA$NVDA.Close, 4)
+NVDA$NVDA.Close_L5 <- lag(NVDA$NVDA.Close, 5)
+NVDA$NVDA.Close_L6 <- lag(NVDA$NVDA.Close, 6)
+NVDA$NVDA.Close_L7 <- lag(NVDA$NVDA.Close, 7)
+NVDA$NVDA.Close_L8 <- lag(NVDA$NVDA.Close, 8)
+NVDA$NVDA.Close_L9 <- lag(NVDA$NVDA.Close, 9)
+NVDA$NVDA.Close_L10 <- lag(NVDA$NVDA.Close, 10)
+# Fill in NA entries in beginning of lag variables
+NVDA <- NVDA %>%
+  fill(NVDA.Close_L1, .direction = "up") %>%
+  fill(NVDA.Close_L2, .direction = "up") %>%
+  fill(NVDA.Close_L3, .direction = "up") %>% 
+  fill(NVDA.Close_L4, .direction = "up") %>% 
+  fill(NVDA.Close_L5, .direction = "up") %>% 
+  fill(NVDA.Close_L6, .direction = "up") %>% 
+  fill(NVDA.Close_L7, .direction = "up") %>% 
+  fill(NVDA.Close_L8, .direction = "up") %>% 
+  fill(NVDA.Close_L9, .direction = "up") %>% 
+  fill(NVDA.Close_L10, .direction = "up") 
+
+# Obtain four simple moving averages of NVDA
+NVDA$NVDA.SMA_cl_1W <- simple_moving_average(NVDA$NVDA.Close, 5)
+NVDA$NVDA.SMA_cl_2W <- simple_moving_average(NVDA$NVDA.Close, 10)
+NVDA$NVDA.SMA_cl_1M <- simple_moving_average(NVDA$NVDA.Close, 20)
+NVDA$NVDA.SMA_cl_2M <- simple_moving_average(NVDA$NVDA.Close, 40)
+# Compute Exponential moving average for NVDA
+NVDA$NVDA.EMA_cl_1W <- exponential_moving_average(NVDA$NVDA.Close, 5)
+NVDA$NVDA.EMA_cl_2W <- exponential_moving_average(NVDA$NVDA.Close, 10)
+NVDA$NVDA.EMA_cl_1M <- exponential_moving_average(NVDA$NVDA.Close, 20)
+NVDA$NVDA.EMA_cl_2M <- exponential_moving_average(NVDA$NVDA.Close, 40)
+# Compute the simple moving deviation of NVDA
+NVDA$NVDA.SMD_cl_1W <- simple_moving_deviation(NVDA$NVDA.Close, 5)
+NVDA$NVDA.SMD_cl_2W <- simple_moving_deviation(NVDA$NVDA.Close, 10)
+NVDA$NVDA.SMD_cl_1M <- simple_moving_deviation(NVDA$NVDA.Close, 20)
+NVDA$NVDA.SMD_cl_2M <- simple_moving_deviation(NVDA$NVDA.Close, 40)
+# Compute the MACD
+NVDA$NVDA.MACD = (NVDA$NVDA.EMA_cl_2W - NVDA$NVDA.EMA_cl_1M)
+
+#######################
+# Begin iteratively adding predictions using linear regression
+#######################
+# Our NVDA and NVDA2 should align on the initial N days
+NVDA$NVDA.Actual <- NVDA$NVDA.Close
+# buffer variable to store predictions in
+pred <- NVDA$NVDA.Close
+N <- length(my_dates)
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional NVDA2 dataframe
+  new_vol <- NVDA2$NVDA.Volume[(N+i)]
+  actual_value <- NVDA2$NVDA.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  NVDA[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value)
+
+  # predict next row, store in buffer variable
+  pred <- predict(linear_fit_NVDA, new_data = NVDA %>% select(-NVDA.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  NVDA$NVDA.Close[N+i] <- pred[N+i]
+}
+
+# Store results of linear regression in a different buffer
+linear_pred <- NVDA$NVDA.Close
+
+#######################
+# Begin iteratively adding predictions for Elastic Net
+#######################
+
+# buffer variable to store predictions in
+pred <- (NVDA %>% slice(1:N))$NVDA.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional NVDA2 dataframe
+  new_vol <- NVDA2$NVDA.Volume[(N+i)]
+  actual_value <- NVDA2$NVDA.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  NVDA[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(elastic_net_fit_NVDA, new_data = NVDA %>% select(-NVDA.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  NVDA$NVDA.Close[N+i] <- pred[N+i]
+}
+
+elastic_net_pred <- NVDA$NVDA.Close
+
+#######################
+# Begin iteratively adding predictions for k-Nearest Neighbors
+#######################
+
+# buffer variable to store predictions in
+pred <- (NVDA %>% slice(1:N))$NVDA.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional NVDA2 dataframe
+  new_vol <- NVDA2$NVDA.Volume[(N+i)]
+  actual_value <- NVDA2$NVDA.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  NVDA[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(knn_fit_NVDA, new_data = NVDA %>% select(-NVDA.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  NVDA$NVDA.Close[N+i] <- pred[N+i]
+}
+
+knn_pred <- NVDA$NVDA.Close
+
+#######################
+# Begin iteratively adding predictions for Random Forest
+#######################
+
+# buffer variable to store predictions in
+pred <- (NVDA %>% slice(1:N))$NVDA.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional NVDA2 dataframe
+  new_vol <- NVDA2$NVDA.Volume[(N+i)]
+  actual_value <- NVDA2$NVDA.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  NVDA[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(random_forest_fit_NVDA, new_data = NVDA %>% select(-NVDA.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  NVDA$NVDA.Close[N+i] <- pred[N+i]
+}
+
+random_forest <- NVDA$NVDA.Close
+
+#######################
+# Begin iteratively adding predictions for Boosted Trees
+#######################
+
+# buffer variable to store predictions in
+pred <- (NVDA %>% slice(1:N))$NVDA.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional NVDA2 dataframe
+  new_vol <- NVDA2$NVDA.Volume[(N+i)]
+  actual_value <- NVDA2$NVDA.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  NVDA[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(boosted_trees_fit_NVDA, new_data = NVDA %>% select(-NVDA.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  NVDA$NVDA.Close[N+i] <- pred[N+i]
+}
+
+boosted_trees <- NVDA$NVDA.Close
+
+
+# re-add results of linear regression from buffer into new variable
+NVDA$NVDA.Linear_Pred <- linear_pred
+NVDA$NVDA.Elastic_Net_Pred <- elastic_net_pred
+NVDA$NVDA.KNN_Pred <- knn_pred
+NVDA$NVDA.Random_Forest_Pred <- random_forest
+NVDA$NVDA.Boosted_Trees_Pred <- boosted_trees
+```
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+######################
+#  Set up data for dataframes for INTC stock for predicting and comparing
+######################
+# STORE ACTUAL CLOSING VALUES AND VOLUMES
+a <- loadSymbols("INTC", from="2023-11-20", to="2024-01-30")
+my_dates2 <- index(INTC)
+INTC2 <- data.frame(INTC)
+INTC2$INTC.Date <- my_dates2
+
+# INITIAL TABLE TO START PREDICTING AFTER / ADDING ENTRIES TO
+a <- loadSymbols("INTC", from="2023-11-20", to="2024-01-02")
+my_dates <- index(INTC)
+INTC <- data.frame(INTC)
+INTC$INTC.Date <- my_dates
+
+# Re-Add Lag variables
+INTC$INTC.Close_L1 <- lag(INTC$INTC.Close, 1)
+INTC$INTC.Close_L2 <- lag(INTC$INTC.Close, 2)
+INTC$INTC.Close_L3 <- lag(INTC$INTC.Close, 3)
+INTC$INTC.Close_L4 <- lag(INTC$INTC.Close, 4)
+INTC$INTC.Close_L5 <- lag(INTC$INTC.Close, 5)
+INTC$INTC.Close_L6 <- lag(INTC$INTC.Close, 6)
+INTC$INTC.Close_L7 <- lag(INTC$INTC.Close, 7)
+INTC$INTC.Close_L8 <- lag(INTC$INTC.Close, 8)
+INTC$INTC.Close_L9 <- lag(INTC$INTC.Close, 9)
+INTC$INTC.Close_L10 <- lag(INTC$INTC.Close, 10)
+# Fill in NA entries in beginning of lag variables
+INTC <- INTC %>%
+  fill(INTC.Close_L1, .direction = "up") %>%
+  fill(INTC.Close_L2, .direction = "up") %>%
+  fill(INTC.Close_L3, .direction = "up") %>% 
+  fill(INTC.Close_L4, .direction = "up") %>% 
+  fill(INTC.Close_L5, .direction = "up") %>% 
+  fill(INTC.Close_L6, .direction = "up") %>% 
+  fill(INTC.Close_L7, .direction = "up") %>% 
+  fill(INTC.Close_L8, .direction = "up") %>% 
+  fill(INTC.Close_L9, .direction = "up") %>% 
+  fill(INTC.Close_L10, .direction = "up") 
+
+# Obtain four simple moving averages of INTC
+INTC$INTC.SMA_cl_1W <- simple_moving_average(INTC$INTC.Close, 5)
+INTC$INTC.SMA_cl_2W <- simple_moving_average(INTC$INTC.Close, 10)
+INTC$INTC.SMA_cl_1M <- simple_moving_average(INTC$INTC.Close, 20)
+INTC$INTC.SMA_cl_2M <- simple_moving_average(INTC$INTC.Close, 40)
+# Compute Exponential moving average for INTC
+INTC$INTC.EMA_cl_1W <- exponential_moving_average(INTC$INTC.Close, 5)
+INTC$INTC.EMA_cl_2W <- exponential_moving_average(INTC$INTC.Close, 10)
+INTC$INTC.EMA_cl_1M <- exponential_moving_average(INTC$INTC.Close, 20)
+INTC$INTC.EMA_cl_2M <- exponential_moving_average(INTC$INTC.Close, 40)
+# Compute the simple moving deviation of INTC
+INTC$INTC.SMD_cl_1W <- simple_moving_deviation(INTC$INTC.Close, 5)
+INTC$INTC.SMD_cl_2W <- simple_moving_deviation(INTC$INTC.Close, 10)
+INTC$INTC.SMD_cl_1M <- simple_moving_deviation(INTC$INTC.Close, 20)
+INTC$INTC.SMD_cl_2M <- simple_moving_deviation(INTC$INTC.Close, 40)
+# Compute the MACD
+INTC$INTC.MACD = (INTC$INTC.EMA_cl_2W - INTC$INTC.EMA_cl_1M)
+
+#######################
+# Begin iteratively adding predictions using linear regression
+#######################
+# Our INTC and INTC2 should align on the initial N days
+INTC$INTC.Actual <- INTC$INTC.Close
+# buffer variable to store predictions in
+pred <- INTC$INTC.Close
+N <- length(my_dates)
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional INTC2 dataframe
+  new_vol <- INTC2$INTC.Volume[(N+i)]
+  actual_value <- INTC2$INTC.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  INTC[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value)
+
+  # predict next row, store in buffer variable
+  pred <- predict(linear_fit_INTC, new_data = INTC %>% select(-INTC.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  INTC$INTC.Close[N+i] <- pred[N+i]
+}
+
+# Store results of linear regression in a different buffer
+linear_pred <- INTC$INTC.Close
+
+#######################
+# Begin iteratively adding predictions for Elastic Net
+#######################
+
+# buffer variable to store predictions in
+pred <- (INTC %>% slice(1:N))$INTC.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional INTC2 dataframe
+  new_vol <- INTC2$INTC.Volume[(N+i)]
+  actual_value <- INTC2$INTC.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  INTC[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(elastic_net_fit_INTC, new_data = INTC %>% select(-INTC.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  INTC$INTC.Close[N+i] <- pred[N+i]
+}
+
+elastic_net_pred <- INTC$INTC.Close
+
+#######################
+# Begin iteratively adding predictions for k-Nearest Neighbors
+#######################
+
+# buffer variable to store predictions in
+pred <- (INTC %>% slice(1:N))$INTC.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional INTC2 dataframe
+  new_vol <- INTC2$INTC.Volume[(N+i)]
+  actual_value <- INTC2$INTC.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  INTC[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(knn_fit_INTC, new_data = INTC %>% select(-INTC.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  INTC$INTC.Close[N+i] <- pred[N+i]
+}
+
+knn_pred <- INTC$INTC.Close
+
+#######################
+# Begin iteratively adding predictions for Random Forest
+#######################
+
+# buffer variable to store predictions in
+pred <- (INTC %>% slice(1:N))$INTC.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional INTC2 dataframe
+  new_vol <- INTC2$INTC.Volume[(N+i)]
+  actual_value <- INTC2$INTC.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  INTC[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(random_forest_fit_INTC, new_data = INTC %>% select(-INTC.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  INTC$INTC.Close[N+i] <- pred[N+i]
+}
+
+random_forest <- INTC$INTC.Close
+
+#######################
+# Begin iteratively adding predictions for Boosted Trees
+#######################
+
+# buffer variable to store predictions in
+pred <- (INTC %>% slice(1:N))$INTC.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional INTC2 dataframe
+  new_vol <- INTC2$INTC.Volume[(N+i)]
+  actual_value <- INTC2$INTC.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  INTC[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(boosted_trees_fit_INTC, new_data = INTC %>% select(-INTC.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  INTC$INTC.Close[N+i] <- pred[N+i]
+}
+
+boosted_trees <- INTC$INTC.Close
+
+
+# re-add results of linear regression from buffer into new variable
+INTC$INTC.Linear_Pred <- linear_pred
+INTC$INTC.Elastic_Net_Pred <- elastic_net_pred
+INTC$INTC.KNN_Pred <- knn_pred
+INTC$INTC.Random_Forest_Pred <- random_forest
+INTC$INTC.Boosted_Trees_Pred <- boosted_trees
+```
+
+
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+######################
+#  Set up data for dataframes for TSM stock for predicting and comparing
+######################
+# STORE ACTUAL CLOSING VALUES AND VOLUMES
+a <- loadSymbols("TSM", from="2023-11-20", to="2024-01-30")
+my_dates2 <- index(TSM)
+TSM2 <- data.frame(TSM)
+TSM2$TSM.Date <- my_dates2
+
+# INITIAL TABLE TO START PREDICTING AFTER / ADDING ENTRIES TO
+a <- loadSymbols("TSM", from="2023-11-20", to="2024-01-02")
+my_dates <- index(TSM)
+TSM <- data.frame(TSM)
+TSM$TSM.Date <- my_dates
+
+# Re-Add Lag variables
+TSM$TSM.Close_L1 <- lag(TSM$TSM.Close, 1)
+TSM$TSM.Close_L2 <- lag(TSM$TSM.Close, 2)
+TSM$TSM.Close_L3 <- lag(TSM$TSM.Close, 3)
+TSM$TSM.Close_L4 <- lag(TSM$TSM.Close, 4)
+TSM$TSM.Close_L5 <- lag(TSM$TSM.Close, 5)
+TSM$TSM.Close_L6 <- lag(TSM$TSM.Close, 6)
+TSM$TSM.Close_L7 <- lag(TSM$TSM.Close, 7)
+TSM$TSM.Close_L8 <- lag(TSM$TSM.Close, 8)
+TSM$TSM.Close_L9 <- lag(TSM$TSM.Close, 9)
+TSM$TSM.Close_L10 <- lag(TSM$TSM.Close, 10)
+# Fill in NA entries in beginning of lag variables
+TSM <- TSM %>%
+  fill(TSM.Close_L1, .direction = "up") %>%
+  fill(TSM.Close_L2, .direction = "up") %>%
+  fill(TSM.Close_L3, .direction = "up") %>% 
+  fill(TSM.Close_L4, .direction = "up") %>% 
+  fill(TSM.Close_L5, .direction = "up") %>% 
+  fill(TSM.Close_L6, .direction = "up") %>% 
+  fill(TSM.Close_L7, .direction = "up") %>% 
+  fill(TSM.Close_L8, .direction = "up") %>% 
+  fill(TSM.Close_L9, .direction = "up") %>% 
+  fill(TSM.Close_L10, .direction = "up") 
+
+# Obtain four simple moving averages of TSM
+TSM$TSM.SMA_cl_1W <- simple_moving_average(TSM$TSM.Close, 5)
+TSM$TSM.SMA_cl_2W <- simple_moving_average(TSM$TSM.Close, 10)
+TSM$TSM.SMA_cl_1M <- simple_moving_average(TSM$TSM.Close, 20)
+TSM$TSM.SMA_cl_2M <- simple_moving_average(TSM$TSM.Close, 40)
+# Compute Exponential moving average for TSM
+TSM$TSM.EMA_cl_1W <- exponential_moving_average(TSM$TSM.Close, 5)
+TSM$TSM.EMA_cl_2W <- exponential_moving_average(TSM$TSM.Close, 10)
+TSM$TSM.EMA_cl_1M <- exponential_moving_average(TSM$TSM.Close, 20)
+TSM$TSM.EMA_cl_2M <- exponential_moving_average(TSM$TSM.Close, 40)
+# Compute the simple moving deviation of TSM
+TSM$TSM.SMD_cl_1W <- simple_moving_deviation(TSM$TSM.Close, 5)
+TSM$TSM.SMD_cl_2W <- simple_moving_deviation(TSM$TSM.Close, 10)
+TSM$TSM.SMD_cl_1M <- simple_moving_deviation(TSM$TSM.Close, 20)
+TSM$TSM.SMD_cl_2M <- simple_moving_deviation(TSM$TSM.Close, 40)
+# Compute the MACD
+TSM$TSM.MACD = (TSM$TSM.EMA_cl_2W - TSM$TSM.EMA_cl_1M)
+
+#######################
+# Begin iteratively adding predictions using linear regression
+#######################
+# Our TSM and TSM2 should align on the initial N days
+TSM$TSM.Actual <- TSM$TSM.Close
+# buffer variable to store predictions in
+pred <- TSM$TSM.Close
+N <- length(my_dates)
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional TSM2 dataframe
+  new_vol <- TSM2$TSM.Volume[(N+i)]
+  actual_value <- TSM2$TSM.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  TSM[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value)
+
+  # predict next row, store in buffer variable
+  pred <- predict(linear_fit_TSM, new_data = TSM %>% select(-TSM.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  TSM$TSM.Close[N+i] <- pred[N+i]
+}
+
+# Store results of linear regression in a different buffer
+linear_pred <- TSM$TSM.Close
+
+#######################
+# Begin iteratively adding predictions for Elastic Net
+#######################
+
+# buffer variable to store predictions in
+pred <- (TSM %>% slice(1:N))$TSM.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional TSM2 dataframe
+  new_vol <- TSM2$TSM.Volume[(N+i)]
+  actual_value <- TSM2$TSM.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  TSM[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(elastic_net_fit_TSM, new_data = TSM %>% select(-TSM.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  TSM$TSM.Close[N+i] <- pred[N+i]
+}
+
+elastic_net_pred <- TSM$TSM.Close
+
+#######################
+# Begin iteratively adding predictions for k-Nearest Neighbors
+#######################
+
+# buffer variable to store predictions in
+pred <- (TSM %>% slice(1:N))$TSM.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional TSM2 dataframe
+  new_vol <- TSM2$TSM.Volume[(N+i)]
+  actual_value <- TSM2$TSM.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  TSM[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(knn_fit_TSM, new_data = TSM %>% select(-TSM.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  TSM$TSM.Close[N+i] <- pred[N+i]
+}
+
+knn_pred <- TSM$TSM.Close
+
+#######################
+# Begin iteratively adding predictions for Random Forest
+#######################
+
+# buffer variable to store predictions in
+pred <- (TSM %>% slice(1:N))$TSM.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional TSM2 dataframe
+  new_vol <- TSM2$TSM.Volume[(N+i)]
+  actual_value <- TSM2$TSM.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  TSM[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(random_forest_fit_TSM, new_data = TSM %>% select(-TSM.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  TSM$TSM.Close[N+i] <- pred[N+i]
+}
+
+random_forest <- TSM$TSM.Close
+
+#######################
+# Begin iteratively adding predictions for Boosted Trees
+#######################
+
+# buffer variable to store predictions in
+pred <- (TSM %>% slice(1:N))$TSM.Close
+
+for(i in 1:15){
+  # Variables that will be added to new row in dataframe
+  new_date <- as.Date(my_dates2[(N+i)])
+  new_L1 <- pred[(N +i - 1)]
+  new_L2 <- pred[(N +i - 2)]
+  new_L3 <- pred[(N +i - 3)]
+  new_L4 <- pred[(N +i - 4)]
+  new_L5 <- pred[(N +i - 5)]
+  new_L6 <- pred[(N +i - 6)]
+  new_L7 <- pred[(N +i - 7)]
+  new_L8 <- pred[(N +i - 8)]
+  new_L9 <- pred[(N +i - 9)]
+  new_L10 <- pred[(N +i- 10)]
+  new_SMA_cl_1W <- mean(pred[(N + i-5):(N+i-1)])
+  new_SMD_cl_1W <- sd(pred[(N +i -5):(N+i-1)])
+  new_EMA_cl_1W <- exponential_moving_average_helper(pred[(N + i-5):(N +i -1)], 5, (1/3))
+  new_EMA_cl_2W <- exponential_moving_average_helper(pred[(N + i-10):(N +i - 1)], 10, (2/11))
+  new_EMA_cl_1M <- exponential_moving_average_helper(pred[(N + i-20):(N+i-1)], 20, (2/21))
+  new_MACD <- new_EMA_cl_2W - new_EMA_cl_1M
+  # pull the ACTUAL information from our additional TSM2 dataframe
+  new_vol <- TSM2$TSM.Volume[(N+i)]
+  actual_value <- TSM2$TSM.Close[N+i]
+
+  # Add new row to our dataframe based on previous predicted values
+  TSM[N + i, ] = c(0, 0, 0, 0, new_vol, 0, new_date,
+                   new_L1, new_L2, new_L3, new_L4, new_L5, new_L6, new_L7, new_L8, new_L9, new_L10,
+                   new_SMA_cl_1W, 0, 0, 0,
+                   new_EMA_cl_1W, new_EMA_cl_2W, new_EMA_cl_1M, 0,
+                   new_SMD_cl_1W, 0, 0, 0,
+                   new_MACD, actual_value )
+
+  # predict next row, store in buffer variable
+  pred <- predict(boosted_trees_fit_TSM, new_data = TSM %>% select(-TSM.Close))$.pred
+  # update the closing price of the N+i-th day to our prediction
+  TSM$TSM.Close[N+i] <- pred[N+i]
+}
+
+boosted_trees <- TSM$TSM.Close
+
+
+# re-add results of linear regression from buffer into new variable
+TSM$TSM.Linear_Pred <- linear_pred
+TSM$TSM.Elastic_Net_Pred <- elastic_net_pred
+TSM$TSM.KNN_Pred <- knn_pred
+TSM$TSM.Random_Forest_Pred <- random_forest
+TSM$TSM.Boosted_Trees_Pred <- boosted_trees
+```
+
+
+
+
+
+```{r eval = TRUE, include=TRUE, warning=FALSE}
+# plot different outcomes for AMD
+ggplot(data = AMD, aes(x=AMD.Date)) +
+  geom_line(aes(y = AMD.Linear_Pred, color = 'Linear Regression Prediction')) +
+  geom_line(aes(y = AMD.Elastic_Net_Pred, color = 'Elastic Net Prediction')) +
+  geom_line(aes(y = AMD.KNN_Pred, color = 'k-Nearest Neighbors Prediction')) +
+  geom_line(aes(y = AMD.Boosted_Trees_Pred, color = 'Boosted-Trees Prediction')) +
+  geom_line(aes(y = AMD.Random_Forest_Pred, color = 'Random Forest Prediction')) +
+  geom_line(aes(y = AMD.Actual, color = 'Actual Closing Value')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'Boosted-Trees Prediction' = 'coral1',
+    'k-Nearest Neighbors Prediction' = 'brown1',
+    'Elastic Net Prediction' = 'burlywood1',
+    'Random Forest Prediction' = 'deeppink',
+    'Actual Closing Value' = 'green',
+    'Linear Regression Prediction' = 'gold'
+  )) +
+  xlab('Date') +
+  ggtitle("Predicted Close Price of AMD") +
+  scale_y_continuous(labels = label_comma()) +
+  theme_dark()
+
+# plot different outcomes for NVDA
+ggplot(data = NVDA, aes(x=NVDA.Date)) +
+  geom_line(aes(y = NVDA.Linear_Pred, color = 'Linear Regression Prediction')) +
+  geom_line(aes(y = NVDA.Elastic_Net_Pred, color = 'Elastic Net Prediction')) +
+  geom_line(aes(y = NVDA.KNN_Pred, color = 'k-Nearest Neighbors Prediction')) +
+  geom_line(aes(y = NVDA.Boosted_Trees_Pred, color = 'Boosted-Trees Prediction')) +
+  geom_line(aes(y = NVDA.Random_Forest_Pred, color = 'Random Forest Prediction')) +
+  geom_line(aes(y = NVDA.Actual, color = 'Actual Closing Value')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'Boosted-Trees Prediction' = 'coral1',
+    'k-Nearest Neighbors Prediction' = 'brown1',
+    'Elastic Net Prediction' = 'burlywood1',
+    'Random Forest Prediction' = 'deeppink',
+    'Actual Closing Value' = 'green',
+    'Linear Regression Prediction' = 'gold'
+  )) +
+  xlab('Date') +
+  ggtitle("Predicted Close Price of NVDA") +
+  scale_y_continuous(labels = label_comma()) +
+  theme_dark()
+
+# plot different outcomes for INTC
+ggplot(data = INTC, aes(x=INTC.Date)) +
+  geom_line(aes(y = INTC.Linear_Pred, color = 'Linear Regression Prediction')) +
+  geom_line(aes(y = INTC.Elastic_Net_Pred, color = 'Elastic Net Prediction')) +
+  geom_line(aes(y = INTC.KNN_Pred, color = 'k-Nearest Neighbors Prediction')) +
+  geom_line(aes(y = INTC.Boosted_Trees_Pred, color = 'Boosted-Trees Prediction')) +
+  geom_line(aes(y = INTC.Random_Forest_Pred, color = 'Random Forest Prediction')) +
+  geom_line(aes(y = INTC.Actual, color = 'Actual Closing Value')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'Boosted-Trees Prediction' = 'coral1',
+    'k-Nearest Neighbors Prediction' = 'brown1',
+    'Elastic Net Prediction' = 'burlywood1',
+    'Random Forest Prediction' = 'deeppink',
+    'Actual Closing Value' = 'green',
+    'Linear Regression Prediction' = 'gold'
+  )) +
+  xlab('Date') +
+  ggtitle("Predicted Close Price of INTC") +
+  scale_y_continuous(labels = label_comma()) +
+  theme_dark()
+
+
+# plot different outcomes for TSM
+ggplot(data = TSM, aes(x=TSM.Date)) +
+  geom_line(aes(y = TSM.Linear_Pred, color = 'Linear Regression Prediction')) +
+  geom_line(aes(y = TSM.Elastic_Net_Pred, color = 'Elastic Net Prediction')) +
+  geom_line(aes(y = TSM.KNN_Pred, color = 'k-Nearest Neighbors Prediction')) +
+  geom_line(aes(y = TSM.Boosted_Trees_Pred, color = 'Boosted-Trees Prediction')) +
+  geom_line(aes(y = TSM.Random_Forest_Pred, color = 'Random Forest Prediction')) +
+  geom_line(aes(y = TSM.Actual, color = 'Actual Closing Value')) +
+  ylab('USD') +
+  scale_color_manual(values = c(
+    'Boosted-Trees Prediction' = 'coral1',
+    'k-Nearest Neighbors Prediction' = 'brown1',
+    'Elastic Net Prediction' = 'burlywood1',
+    'Random Forest Prediction' = 'deeppink',
+    'Actual Closing Value' = 'green',
+    'Linear Regression Prediction' = 'gold'
+  )) +
+  xlab('Date') +
+  ggtitle("Predicted Close Price of TSM") +
+  scale_y_continuous(labels = label_comma()) +
+  theme_dark()
+```
+ 
+
+
+
 # Conclusion 
+
+In a certain sense, stock market data is one of the most difficult things to completely predict — societal influences, supply chain issues, and even international politics can cast ripples which are difficult for any model to predict. On the other hand, our analysis shows that Occam's razor holds its merit even within the discipline of statistical learning: the model that is simplest to describe will often be the correct fit. After exploring a bit of the theory surrounding time-series, however, this outcome is not entirely unexpected: one of the most popular models for predicting stock-market behavior is known as ARIMA (Auto-Regression Integrated Moving Average). As the name suggests, this is a well-tuned regression model trained on its lag variables and moving averages, together with an "integrating" / differencing step which  handles seasonal or non-stationary data. Ultimately, seasonality and trends in the data were not factors taken into account for this analysis, and thus will likely 
+
+
+
