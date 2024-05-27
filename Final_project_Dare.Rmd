@@ -16,45 +16,51 @@ date: "2024-05-10"
 
 With the growing presence of technology in society, there is a rapidly increasing demand for hardware which supports our computational needs. One of the most important pieces of hardware for computationally-intensive workloads are Graphics Processing Units (GPUs) due to their ability to handle a multitude of parallel processing tasks; as a result, they have become an invaluable resource for companies pursuing artificial intelligence, scientific computing, cryptocurrency mining, computer graphics, or any other processing-heavy task. For example, companies on the forefront of the technology industry (such as Meta, Amazon, Apple) are a blue chip in any investor's stock portfolio; however, it is important to recognize that each of these companies depends on the ability to process vast amounts of users' data every day. Consequently, companies which manufacture processing chips have been a focal point for investors in recent years, as they directly control the output capabilities for a large portion of the technology sector.
 
-The purpose of this project is to attempt to predict the price-trends of a semiconductor stock - in fact, there are four stocks we wish to simultaneously predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the goal of applying various of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most effective for stock market predictions (at least in the case of semiconductor stocks). Put differently, if we found that a particular statistical learning model was the best fit a some stock, this would naturally raise the question of whether that is due to a characteristic of the model or a characteristic of the stock. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models, ranging from standard regression to more non-linear models like random forest and k-Nearest neighbors.
+The purpose of this project is to attempt to predict the price-trends of a semiconductor stock — in fact, there are four stocks we wish to simultaneously predict: Nvidia, Advanced Micro Devices (AMD), Intel Corporation, and Taiwan Semiconductor Manufacturing. Though tackling four separate stocks slightly deviates from the goal of applying various of machine learning algorithms to a *single* data-set, the hope is that this will give a better prediction of which machine learning models are most effective for stock market predictions (at least in the case of semiconductor stocks). Put differently, if we found that a particular statistical learning model was the best fit a some stock, this would naturally raise the question of whether that is due to a characteristic of the model or a characteristic of the stock. Therefore, for each of the four chip manufacturers listed above, we will apply a variety of statistical learning models, ranging from standard regression to more non-linear models like random forest and k-Nearest neighbors.
 
 # Loading Packages and Data
 
 ```{r setup, include=TRUE, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# Required for statistical learning algorithms
 library(tidyverse)
 library(tidymodels)
+library(glmnet)
+library(ranger) # Random forests
+library(xgboost) # Extreme Gradient boosting
+library(yardstick) # Model Performance
+
+# Required for plotting
 library(ggplot2)
 library(corrplot)
-library(discrim)
-library(ggthemes)
+library(plotly) # Used in several of the rotating carousels for interactive plots
+library(dygraphs) # Used once in beginning for interactive plots of timeseries data
+
+# Required for formatting:
 library(kableExtra)
-library(yardstick)
-library(visdat)
-library(scales)
-library(glmnet)
-library(quantmod)
-library(dplyr)
-library(dygraphs)
-library(tidyr)
-library(ranger)
-library(xgboost)
-library(vip)
-library(swipeR)
-library(htmltools)
-library(plotly)
-library(base64enc)
+library(scales) 
+library(swipeR) # Creates rotating carousels for images in HTML
+library(htmltools) # swipeR dependencies
+
+# Single function from entire library used:
+library(vip) # vip()
+library(visdat) #vis_miss() 
+
+# ETC:
+library(quantmod) #Allows dynamic loading and plotting of data
+
 
 
 tidymodels_prefer()
 conflicted::conflicts_prefer(yardstick::rsq)
 conflicted::conflicts_prefer(dplyr::lag)
+# Ensure that random processes return roughly same results each time
 set.seed(3435)
 ```
 
-One of the most useful packages for the analysis of stock market data in R is the `quantmod` package. While there are several built-in functions in the `quantmod` library which already predict stock market trends using statistical learning, we will simply use this package for the purpose of pulling live stock data from [Yahoo Finance](https://finance.yahoo.com/) and visualizing the data in a much neater fashion than usual `ggplot2` (as certain statistical-learning models in the `quantmod` package are not highly compatible with tools we will need later in this analysis).
+One of the most useful packages in R for the analysis of stock market data is the `quantmod` package. While there are several built-in functions in the `quantmod` library which already predict stock market trends using statistical learning, we will simply use this package for the purpose of pulling live stock data from [Yahoo Finance](https://finance.yahoo.com/) and visualizing the data in a much neater fashion than usual `ggplot2` (in addition, the statistical-learning models in the `quantmod` package are not highly compatible with tools we will need later for model exploration).
 
-To expand slightly more on the application of this library, the `quantmod` package allows us to circumvent the process of downloading a CSV file of stock data and reading it into R by instead calling the `loadSymbols()` function — this method then automatically loads all stock data (over a potentially specified time-frame) into a data structure assigned the same name as the stock's symbol. Since the function `loadSymbols` will automatically set the most recent day to pull stock data as the current day, we must specify a fixed "last day" to ensure that our models run the same data every time; in particular, we will fix our time-frame as the 2023 fiscal year, ranging from January $1^{\text{st}}$, 2023 to January $1^{\text{st}}$, 2024. It is worth noting that the table loaded by `loadSymbols` is **not** a data-frame; its original datatype must be used for other functions in the `quantmod` package such as the `chartSeries` plots applied below, but we will later need to typecast this object to a usual data-frame in order to apply most of the `tidyverse` functions.
+To expand slightly further on the application of this library, the `quantmod` package allows us to circumvent the process of downloading a CSV file of stock data and reading it into R by instead calling the `loadSymbols()` function — this method then automatically loads all stock data (over a potentially specified time-frame) into a data structure assigned the same name as the stock's symbol. Since the function `loadSymbols` will automatically set the most recent day to pull stock data as the current day, we must specify a fixed "last day" to ensure that our models run the same data every time; in particular, we will fix our time-frame as the 2023 fiscal year, ranging from January $1^{\text{st}}$, 2023 to January $1^{\text{st}}$, 2024. It is worth noting that the table loaded by `loadSymbols` is **not** a data-frame; its original datatype must be used for other functions in the `quantmod` package such as the `chartSeries` plots applied below, but we will later need to typecast this object to a usual data-frame in order to apply most of the `tidyverse` functions.
 
 <br/>
 <br/>
@@ -122,7 +128,7 @@ INTC$Date <- my_dates
 ```
 
 ```{r  eval = TRUE, include=TRUE, warning=FALSE}
-a<-loadSymbols("TSM", from="2023-01-01", to="2024-01-01")
+TSM<-loadSymbols("TSM", from="2023-01-01", to="2024-01-01", auto.assign = FALSE)
 chartSeries(TSM,TA=c(addVo(),addBBands(),addMACD()))
 # Typecast as dataframe
 TSM <- data.frame(TSM)
@@ -139,28 +145,20 @@ TSM <- TSM %>% rename(
 TSM$Date <- my_dates
 ```
 
-With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks, it suffices to check the dimensions of only one of our data frames:
+With each stock's data loaded and typecast into a data-frame, we also want to examine the total number of predictors and observations for each individual stock. As the beginning and ending dates specified in `loadSymbols` are the same across our four stocks (and all four stocks were availible on the New York Stock Exchange within this duration), it suffices to check the dimensions of only one of our data frames:
 
 ```{r  eval = TRUE, include=TRUE, warning=FALSE}
 dim(AMD)
 ```
 
-One may be initially misled by the fact that only 250 observations appear across a years worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a hanful of holidays. In fact, a quick analysis shows that there is no missing data among any of the four stocks — this is somewhat expected, however, since stock market data is meant to be publicly available and the original features are fairly common metrics for financial institutions to collect.
+Initially, one may be misled by the fact that only 250 observations appear across a year's worth of data; i.e. we only have 250 out of 365 days. However, this is simply a reflection of the fact that the New York Stock Exchange does not operate on weekends and a handful of holidays. In fact, a quick analysis shows that there is no missing data among any of the four stocks — this is somewhat expected, however, since stock market data is meant to be publicly available and the original features are fairly common metrics for financial institutions to collect.
 
 
-```{r  eval = TRUE, include=TRUE, warning=FALSE}
-g1 <- vis_miss(AMD) + labs(x = "Missing Data for AMD")
-g2 <- vis_miss(NVDA) + labs(x = "Missing Data for NVDA")
-g3 <- vis_miss(INTC) + labs(x = "Missing Data for INTC")
-g4 <- vis_miss(TSM) + labs(x = "Missing Data for TSM")
-
-wrapper <- swipeRwrapper(
-  tags$div(style = "width: 500px; margin: auto;", ggplotly(g1)),
-  tags$div(style = "width: 500px; margin: auto;", ggplotly(g2)),
-  tags$div(style = "width: 500px; margin: auto;", ggplotly(g3)),
-  tags$div(style = "width: 500px; margin: auto;", ggplotly(g4))
-)
-swipeR(wrapper, height = "400px", navigationColor = "navy")
+```{r  eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="25%"}
+vis_miss(AMD) + labs(x = "Missing Data for AMD")
+vis_miss(NVDA) + labs(x = "Missing Data for NVDA")
+vis_miss(INTC) + labs(x = "Missing Data for INTC")
+vis_miss(TSM) + labs(x = "Missing Data for TSM")
 ```
 
 # Exploratory Data Analysis
@@ -356,11 +354,11 @@ One issue that immediately arises after defining lag variables is that they are 
 $$
 \operatorname{SMA}(X_i, k) = \frac{1}{k}\sum_{j=1}^{k}X_{i-j}
 $$ 
-Notice that the above formula is non-inclusive of the current data point — this will turn out to be and _incredibly_ important detail for our regression-based models to be of any use, as otherwise they can simply recover the desired outcome directly. For example, suppose we wanted to train an autoregressive linear model based off of the past 5 days' lag variables and the 5 day simple moving average. That is, we wish to find coefficients $\beta_0, \beta_1, \dots, \beta_5, \beta_{\text{SMA}}$ to minimize the residual sum of squares in
+Notice that the above formula is non-inclusive of the current data point — this will turn out to be and _incredibly_ important detail for our regression-based models to be of any use, as otherwise they can simply recover the desired outcome directly. For example, suppose we wanted to train an autoregressive linear model based off of the past 5 days' lag variables and a 5 day simple moving average, where the sum was instead taken over indices $j=0$ to $j=k-1$. This amounts to finding coefficients $\beta_0, \beta_1, \dots, \beta_5, \beta_{\text{SMA}}$ to minimize the residual sum of squares in
 $$
 X_i = \beta_0 + \beta_1 X_{i-1} + \beta_2 X_{i-2} + \beta_3 X_{i-3} + \beta_4 X_{i-4} + \beta_5 X_{i-5} + \beta_{\text{SMA}} \, \text{SMA}(X_i, 5)
 $$
-Then by taking $\beta_0 = 0$, $\beta_i = -1$ for $1 \leq i \leq 5$ and $\beta_{\text{SMA}} = 5$ we can immediately recover the variable $X_i$. Though this may seem like a moot point, it was not taken into account in earlier versions of the project leading to the simplest model (linear regression) somehow dominating all other models.
+When $\operatorname{SMA}$ ranges over the indices $0 \leq j \leq 4$ instead of $1 \leq j \leq 5$, we can just take $\beta_0 = 0$, $\beta_i = -1$ for $1 \leq i \leq 5$ and $\beta_{\text{SMA}} = 5$ to immediately recover the outcome variable $X_i$. Though this may seem like a moot point, it was not taken into account in earlier versions of the project leading to the simplest model (linear regression) somehow dominating all other models.
 
 ```{r  eval = TRUE, include=TRUE, warning=FALSE}
 
@@ -521,7 +519,7 @@ Taking different values for the "lag period" of the simple moving average also h
 
 ### Exponential Moving Average
 
-While the simple moving average (SMA) above can be incredibly useful to de-correlate the lag variables and measure the trends and behaviors of a given security, it can fall short in one particular way: it gives equal weight to events that happened at the beginning of the lag period as it does to events that happened at the end of the lag period. This is generally not the case with time series problems, as the relevancy of data points tends to decay over time. A better model would be to weight recent events more heavily than events further in the past, and then take the average of these $\text{values} \times \text{weights}$ — this is precisely the idea behind the *exponential moving average*. Specifically, we fix some *smoothing factor* $\beta > 0$, define our weight to be $w = \beta\, /\, (n+1)$, and then the exponential moving average as
+While the simple moving average (SMA) above can be incredibly useful to de-correlate the lag variables and measure the trends and behaviors of a given security, it can fall short in one particular way: it gives equal weight to events that happened at the beginning of the lag period as it does to events that happened at the end of the lag period. This is generally not the case with time series problems, as the relevancy of data points tends to decay over time. A better model would be to weight recent events more heavily than events further in the past, and then take the average of these $\text{values} \times \text{weights}$ — this is precisely the idea behind the *exponential moving average*. Specifically, we fix some *smoothing factor* $\beta > 0$, define our weight to be $w = \beta\, /\, (n+1)$, and then define the exponential moving average as
 $$
 \operatorname{EMA}(X_i, n) = w \cdot X_{i}\ +\ (1-w) \cdot\operatorname{EMA}(X_{i-1}, n)
 $$
@@ -716,15 +714,15 @@ wrapper <- swipeRwrapper(
 swipeR(wrapper, height = "400px", navigationColor = "navy")
 ```
 
-While the plots of the simple moving average and exponential average look very similar to one another, one notable difference is that the exponential average does not "smooth out" the curve as much — this is simply due to the fact that any recent volatility affects the exponential moving average much more than the simple moving average (since recent events is weighed more heavily).
+While the plots of the simple moving average and exponential average look very similar to one another, one notable difference is that the exponential average does not "smooth out" the curve as much — this is due to the fact that any recent volatility affects the exponential moving average much more than the simple moving average (since recent events is weighed more heavily).
 
 ### Simple Moving Deviation of Closing Price
 
-With a concrete notion of the simple moving average as the mean of a fixed number of lag variables, a natural extension is to also consider the standard deviation of lag variables to gain insight on the volatility of a time series. In fact, the simple moving deviation has a very particular name when applied to the analysis of stock prices: **Bollinger Bands**. By revisiting some of our first plots obtained using the `chartSeries()` function (in the *Loading Packages and Data* chapter), we see the red-dotted lines above and below the stock values (i.e. the Bollinger bands) provide a relatively accurate error-range of where the stock prices will fall. In terms of computing the Bollinger bands, the simple moving deviation is simply computed as 
+With a concrete notion of the simple moving average as the mean of a fixed number of lag variables, a natural extension is to also consider the standard deviation of lag variables to gain insight on the volatility of a time series. In fact, the simple moving deviation has a very particular name when applied to the analysis of stock prices: **Bollinger Bands**. By revisiting some of our first plots obtained using the `chartSeries()` function (in the *Loading Packages and Data* chapter), we see the red-dotted lines above and below the stock values (i.e. the Bollinger bands) provide a relatively accurate error-range of where the stock prices will fall. In terms of computing the Bollinger bands, the simple moving deviation is computed as 
 $$
 \operatorname{SMD}(X_i, n) = \sqrt{ \frac{\sum_{j=1}^{n} (X_{i-j} - \operatorname{SMA}(X_i, n))^2}{n-1} }
 $$
-As with the simple moving average, it is important not to include the current observation as a term in the simple moving average as this potentially allows mechanistic models to recover the data point by "reverse-engineering" the above formula.
+As with the simple moving average, it is important to __not__ include the current observation in the simple moving average as this potentially allows our models to recover the outcome variable $X_i$ by "reverse-engineering" the above formula.
 
 ```{r  eval = TRUE, include=TRUE, warning=FALSE }
 simple_moving_deviation <- function(my_vec, lag_period) {
@@ -877,7 +875,7 @@ wrapper <- swipeRwrapper(
 swipeR(wrapper, height = "400px", navigationColor = "navy")
 ```
 
-Ultimately, plotting our simple moving deviation without the relevant simple moving averages is not terribly insightful; as one would expect, there is more variation across longer periods than there is across shorter periods.
+Ultimately, plotting our simple moving deviation without the relevant simple moving averages is not terribly insightful — as one would expect, there is more variation across longer periods than there is across shorter periods.
 
 ### Moving Average Convergence Divergence (MACD)
 
@@ -970,7 +968,7 @@ select(TSM, Close, Volume, SMD_cl_1W, SMD_cl_2W, SMD_cl_1M, SMD_cl_2M, MACD) %>%
   corrplot(method = "circle", type = "lower", diag = FALSE, tl.cex=0.6, title="TSM Correlation Plot")
 ```
 
-From the above plots we are able to confirm that there is in fact a heavy correlation between the closing price and each of the lag variables which decreases with the lag period. In addition, we see that all of our initial variables aside from volume (i.e. Low, High, Open, Close, and Adjusted) are all highly correlated with one another; to an extend, this tells us that all of the variables follow the same underlying market trend so we could hypothetically use any one to predict the other. Lastly, we see a somewhat unexpected correlation between the 1-week standard moving deviation of the closing price and the volume of securities sold on a given day for each of the four stocks.
+From the above plots we are able to confirm that there is in fact a heavy correlation between the closing price and each of the lag variables which decreases with the lag period. In addition, we see that all of our initial variables aside from volume (i.e. Low, High, Open, Close, and Adjusted) are all highly correlated with one another; to an extend, this tells us that all of the variables follow the same underlying market trend so we could hypothetically use any one to predict the other. Lastly, we see a somewhat unexpected correlation between the 1-month standard moving deviation of the closing price and the MACD for each of the four stocks.
 
 # Setting Up Models
 
@@ -1040,7 +1038,7 @@ TSM_recipe = recipe(Close ~ Close_L1 + Close_L2 + Close_L3 + Close_L4 +
 
 ## k-Fold Cross Validation
 
-As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of *k-fold cross validation* is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k \geq 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times, where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
+As each of our datasets contain a relatively small number of observations (N = 250) taken across 2023, it is important to maximize the utility we are getting out of our data. The purpose of *k-fold cross validation* is to ensure that our models do not become overfit to any particular subset of observations by rotating exactly $k > 1$ subsets of our data between training data and validation. Specifically, we split our data into $k=10$ (roughly) equal sized subsets, stratified about our outcome variable to ensure that there is (roughly) equal variance in each subset. Using these 10 subsets, we train each model 10 times, where precisely one subset is taken to be the validation data while the remaining 9 subsets serve as training data.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 AMD_folds  <- vfold_cv(AMD_train, v = 10, strata = Close)
@@ -1168,7 +1166,7 @@ knn_model <- nearest_neighbor(neighbors = tune()) %>%
 
 ### Random Forest
 
-Similar to $k$-nearest neighbors, forest-based algorithms are highliy non-linear and non-parametric models; however, they do not necessarily rely on the norm or metric of the underlying parameter space (which $k$-Nearest neighbors to determine what constitutes "nearest"). Instead, tree-based algorithms rely much more on the underlying topology of the parameter space $X$, as one considers finite sub-covers of $X$ where each open set contains at least one sample point. Random collections of observations in the training data are then sampled (in a process known as *bootstrapping*), and corresponding splits of the parameter space are taken. A decision tree is then assigned to describe the partition of the parameter space; any graph made up of a disjoint union of trees is known as a *forest* (hence the name random forest). While decision trees are individually highly sensitive to perturbations in the training data (e.g if the proportion of data above / below the average of a certain variable flips, nodes corresponding to that variable in the decision trees will generally swap as well), by taking the median or mode across the outcome of $N \geq 1$ trees, we stabilize our model significantly.
+Similar to $k$-nearest neighbors, forest-based algorithms are highly non-linear, non-parametric models; however, they do not necessarily rely on the norm or metric of the underlying parameter space (which $k$-Nearest neighbors to determine what constitutes "nearest"). Instead, tree-based algorithms rely much more on the underlying topology, as one considers finite open covers of $X$ where each open set contains at least one sample point. Random collections of observations in the training data are then sampled (in a process known as *bootstrapping*), and corresponding splits of the parameter space are taken. A decision tree is then assigned to describe the partition of the parameter space; the disjoint union of these trees is known in graph theory as a *forest* (hence the name random forest). While decision trees are individually highly sensitive to perturbations in the training data (e.g if the proportion of data above / below the average of a certain variable flips, nodes corresponding to that variable in the decision trees will generally swap as well), by taking the median or mode of the outcome across $N \geq 1$ trees, our model stabilizes significantly.
 
 <br/>
 
@@ -1193,7 +1191,7 @@ random_forest_model <- rand_forest(mtry = tune(),
 
 ### Boosted Trees
 
-Similar to random forests, an array of decision trees are created to each individually contribute to the outcome of a decision. However, boosted trees rely on the concept of *gradient boosting* (with respect to a loss function) in optimization / measure theory. In this case, tree are iteratively constructed in order to minimize the training error of the previous tree (with respect to some loss function). A learning rate is then established to dictation how much each decision tree weighs in on the outcome of the previous decision tree, thus leading to a highly flexible (but difficult to tune) model.
+Similar to random forests, an array of decision trees are created to each individually contribute to the outcome of a decision. However, boosted trees rely on the concept of *gradient boosting* (with respect to a loss function) in optimization / measure theory. In this case, trees are consecutively constructed in order to minimize the training error of the previous tree. A learning rate is then established to dictate how much each decision tree weighs in on the outcome of the previous decision tree, thus leading to a highly flexible (but difficult to tune) model.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1206,7 +1204,7 @@ boosted_trees_model <- boost_tree(mtry = tune(),
   set_mode("regression")
 ```
 
-With all seven of our statistical learning algorithms fixed (along with `tune()` applied to relevant hyperparameters), we are now able to load the models and recipes into workflows. Workflows are objects introduced by the `tidymodels` package that allows us to keep track of all pre-processing and modelling simultaneously, and will be particularly useful in minimizing the number of objects to keep track of since we will be dealing with seven models for each of our four stocks.
+With all seven of our statistical learning algorithms fixed (along with `tune()` applied to relevant hyperparameters), we are now able to load the models and recipes into workflows. Workflows are objects introduced by the `tidymodels` package that allows us to keep track of all pre-processing and modelling simultaneously, and will be particularly useful in minimizing the number of objects to keep track of (since we will be dealing with seven models for each of our four stocks).
 
 <center>
 
@@ -1330,9 +1328,9 @@ boosted_trees_wflow_TSM <- workflow() %>%
 
 ## Tuning Hyperparameters
 
-The fact that the majority of our models have additional parameters (i.e. $k$ for $k$-nearest neighbors, $\alpha$ for elastic net) is a bit of a double-edged sword: it adds a significant amount of flexibility to our models, but now begs the question of "what values of these additional parameters gives us the best results?" Unfortunately there is often no universal answer which applies to all data-sets. As a result, finding optimal hyperparameter values often feels like navigating through a dark room with our bare hands — we don't really know where to start, so we blindly go forward until we stumble on something. Though this is a bit of an exaggeration (as there are mathematically rigorous estimates, such as searching near $k = \sqrt{\# \text{samples}}$ for $k$-nearest neighbors), it can certainly feel like the case when a considerable portion of our computational runtime comes from throwing grid-search at each model.
+The fact that the majority of our models have additional parameters (i.e. $k$ for $k$-nearest neighbors, $\alpha$ for elastic net) is a bit of a double-edged sword: it adds a significant amount of flexibility to our models, but now begs the question of "what values of these additional parameters gives us the best results?" Unfortunately there is often no universal answer which applies to all data-sets. As a result, finding optimal hyperparameter values often feels like navigating through a dark room with our bare hands — we don't really know where to start, so we blindly search until we stumble on something that looks right. Though this is a bit of an exaggeration (as there are mathematically rigorous estimates, such as searching near $k = \sqrt{\# \text{samples}}$ for $k$-nearest neighbors), it can certainly feel like the case when a considerable portion of our computational run-time comes from throwing grid-search at each model.
 
-The upshot of tuning hyperparameters is that it is quite easy to understand: we naïvely just punch in a bunch of values (within some predetermined interval) for each hyperparameter and see what happens with that model. In a certain sense, the difficult part is figuring out what interval gives us enough room for an optimized model without turning the computational complexity into a travelling-salesman problem. For both our regression and $k$-nearest neighbors, we simply iterate over the default values (spaced by a log base-10 scaling); for random forest and boosted trees, a bit of trial-and-error was required to see which hyperparameters led to a decrease in training root mean square error (RMSE).
+The upshot of tuning hyperparameters is that it is quite easy to understand: we naïvely just enter in a bunch of values (within some predetermined interval) for each hyperparameter and see what happens with that model. In a certain sense, the difficult part is figuring out which intervals give us enough room for an optimized model without turning the complexity into that of a travelling-salesman problem. 
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1644,7 +1642,7 @@ swipeR(wrapper, height = "400px", navigationColor = "navy")
 
 For $k$-Nearest neighbors, we additionally see that the optimal choices of $k$ (i.e. the local minima on the graphs above) do occur *somewhat* close to the square root of the number of sample sizes (i.e. roughly 15 in this case). However, the positive relationship between $k$ and our RMSE value shows smaller values of $k$ are still favored — in fact, the optimal values of $k$ vary between $2 \leq k \leq 6$ for all four of our stocks.
 
-```{r eval = TRUE, include=TRUE, warning=FALSE }
+```{r eval = TRUE, include=TRUE, warning=FALSE,  fig.show="hold", out.width="50%" }
 # Load tuned Random Forest grids
 load("tuned_grids/random_forest_tune_AMD.rda")
 load("tuned_grids/random_forest_tune_NVDA.rda")
@@ -1656,7 +1654,12 @@ g2<-autoplot(random_forest_tune_NVDA) + ggtitle("Random Forest NVDA") + theme_da
 g3<-autoplot(random_forest_tune_INTC) + ggtitle("Random Forest INTC") + theme_dark() + theme(text = element_text(size = 9))
 g4<-autoplot(random_forest_tune_TSM) + ggtitle("Random Forest TSM") + theme_dark() + theme(text = element_text(size = 9))
 
+g1
+g2
+
 ```
+We only provide the performance plots of random forest and boosted trees for two of our stocks, AMD and NVDA, since the formatting libraries (i.e. `ggplotly` and `swipeR`) are not by default compatible with the labelling / facet structure of `autoplot()` in these instance —  a more detailed knowledge of `facet_wrap()` and `facet_grid()` is likely needed to pass the above autoplots into any sort of `ggplotly` object. Aside from the formatting technicalities, we notice that the best performing random trees models require a larger number of randomly selected predictors, though the boosted trees models generally capture less variation of the outcome as the number of predictors grows.
+
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned Boosted Trees grids
@@ -1671,7 +1674,7 @@ autoplot(boosted_trees_tune_NVDA) + theme_dark() + ggtitle("Boosted Trees NVDA")
 
 <br/> <br/> <br/>
 
-Though having a vast amount of data about the relationship between our hyperparameters and training accuracy is useful for better understanding each model, we ultimately only care about which exact hyperparameter values give us the best results (according to some chosen metrics). Using the `select_best()` function from our `tidymodels` package, we need only specify the metric we care most about in order to extract the optimal model for each of our seven statistical learning algorithms, thus concluding the hyperparameter tuning portion of this analysis.
+Though having a vast amount of data describing the relationship between our hyperparameters and training accuracy is useful for better understanding each model, we ultimately only care about which exact hyperparameter values give us the best results (according to some chosen metrics). Using the `select_best()` function from our `tidymodels` package, we need only specify the metric we care most about in order to extract the optimal model for each of our seven statistical learning algorithms, thus concluding the hyperparameter tuning portion of this analysis.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1749,7 +1752,7 @@ boosted_trees_final_wflow_TSM <- select_best(boosted_trees_tune_TSM , metric = "
 
 # Performance of Models
 
-After an arduous process of tuning each of our seven models across all four stocks, we now have an array of workflows that should be well-primed for our entire set of training data (remember that the hyperparameter tuning was done on 10-fold cross validation, so each model has only seen $9/10^{th}$ of the data ). Ultimately, the performance of our models on the the entire training set (exactly $1/10^{th}$ of which is unseen by the models) need not give any indication about the performance of these models on unseen testing data; regardless, we will use this as a benchmark for which two models pass on to the testing data.
+After an arduous process of tuning each of our seven models across all four stocks, we now have an array of workflows that should be well-primed for our entire set of training data (remember that the hyperparameter tuning was done on 10-fold cross validation, so each model has only seen $9/10^{\text{th}}$ of the data ). Ultimately, the performance of our models on the the entire training set (exactly $1/10^{\text{th}}$ of which is unseen by the models) need not give any indication about the performance of these models on unseen testing data; regardless, we will use this as a benchmark for which two models pass on to the testing data.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
 ############################
@@ -1811,7 +1814,7 @@ boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 
 ## Variable Importance
 
-As a brief aside, with the models fit we now have all the information necessary to examine how much impact each predictor has. Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is required to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-base statistical learning algorithms regarding which variables affect the outcome of our model most heavily. For example, we can plot the *variable importance plots* for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is actually a slight difference in terms of which variable is considered most relevant for predicting stock price:
+As a brief aside, with the models fit we now have all the information necessary to examine how much impact each predictor has. Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is required to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-base statistical learning algorithms regarding which variables affect the outcome most heavily. For example, we can plot the *variable importance plots* for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is actually a slight difference in terms of which variable is considered most relevant for predicting stock price:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 random_forest_fit_AMD %>% extract_fit_parsnip() %>% 
@@ -2066,10 +2069,10 @@ tibble(Model = c("Random Forest", "Boosted Trees"),
   kable_styling(full_width = F)
 ```
 
-Unlike the case of the training data, we see that both models perform with roughly the same accuracy according to our metrics. Fortunately, the fact that the root mean squared error is relatively low across both models also indicates that there is not likely too much over-fitting occurring.
+Unlike the case of the training data, we see that both models perform with roughly the same accuracy according to our metrics. Fortunately, the fact that root mean squared error is relatively low across both models indicates that there is not likely much over-fitting occurring.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
-tibble(Model = c("Linear Regression", "Boosted Trees"),
+tibble(Model = c("Random Forest", "Boosted Trees"),
        AMD = c((random_forest_test_res_AMD  %>% rsq( Close, .pred))$.estimate,
                     (boosted_trees_test_res_AMD  %>% rsq( Close, .pred))$.estimate),
        NVDA = c((random_forest_test_res_NVDA  %>% rsq( Close, .pred))$.estimate,
@@ -2406,21 +2409,15 @@ wrapper <- swipeRwrapper(
 swipeR(wrapper, height = "400px", navigationColor = "navy")
 ```
 
-The area between the forecast's curve and the actual outcome (with respect to some measure $\mu$ on the parameter space) provides a variety of new ways to test the accuracy of models' long term behavior. Unfortunately, constructing such a metric that is compatible with the `yardsticks` package (and thus can be used with a `grid_regular` to tune hyperparameters) is outside the scope of this project and would likely require several methods above to be heavily optimized. 
+In addition, the area between the forecast's curve and the actual outcome provides a variety of new ways to test the accuracy of models' long term behavior. Unfortunately, constructing such a metric which is compatible with the `yardsticks` package (and thus can be used with a `grid_regular` to tune hyperparameters) is outside the scope of this project and would likely require several methods above to be heavily optimized. 
 
+Lastly, we can see from the contrast between the predicted forecasts and the actual stock prices that our models are __not a suitable tool for any serious__ (or amateur for that matter) __investor to apply to their portfolio__. Though this should be an obvious statement considering the purpose of the project is educational, full disclosure should be given before anyone loses their retirement savings. 
 
 
 # Conclusion
 
-Stock market data can be one of the most difficult things for investors to predict — societal influences, supply chain issues, and even international politics are all factors that can cast ripples which drastically affect long-term behavior. When the lag period is significantly longer than the number of days to forecast, this analysis has shown that a rudimentary statistical-learning approach will suffice for estimating the stock prices over the course of a year. However, we have only scratched the surface in what is ultimately a much more intricate field of study — there multiple topics in time-series analysis which could have been used to optimize our models, and metrics in economic theory that could have been used to further predict our data. For example, seasonality / periodicity of time-series is something that is heavily examined by any half-decent stock forecasting model, though this was only briefly identified in the variable importance section. In fact, many stock forecasting models will also consider the proximity to holidays or special events to isolate unexpected jumps as much as possible. 
+Stock market data can be one of the most difficult things for investors to predict — societal influences, supply chain issues, and even international politics are all factors that can cast ripples which drastically affect long-term behavior. When the lag period is significantly longer than the number of days to forecast, this analysis has shown that a rudimentary statistical-learning approach will suffice for estimating the stock prices over the course of a year. However, we have only scratched the surface in what is ultimately a much more intricate field of study — there are multiple topics in time-series analysis which could have been used to optimize our models further, and metrics in economic theory that would have given further insight into the behavior of our securities. For example, seasonality / periodicity is something that is heavily considered by any half-decent stock forecasting model, though this was only briefly identified in the variable importance section — in fact, many stock forecasting models will go as far as to also factor in nearby holidays or special events. 
 
-Ultimately, the are several factors that should be considered for future adaptations / continuations of this project.  not much effort was made to justify the lag-length of two weeks in the Exploratory Data Analysis section  — though it was not entirely relevant for our goal of applying statistical learning models to stock data, any complete analysis should try to find and apply an optimal lag length value. From the perspective of economic theory, we did not add any predictors that measured the momentum of our securities in any way; this is typically done through measuring some sort of proportion of average gains versus average losses across preiods of growth and decay. For example, the Relative Strength Index (RSI) would have been a useful metric to add to warn our models when any particular stock is getting overbought or oversold.
+Ultimately, the are several factors that should be taken into considerations for future adaptations / continuations of this project. For example, not much effort was made to justify the lag-length of two weeks in the Exploratory Data Analysis section  — though it was not entirely relevant for our goal of applying statistical learning models to stock data, any complete analysis of time-series data should try to optimize lag length. From the perspective of economic theory, we did not add any predictors that measured the momentum of our securities in any way; this is typically done through measuring some sort of proportion of average gains versus average losses across periods of growth and decay. For example, the Relative Strength Index (RSI) would have been a useful metric for warning models when any particular stock is getting overbought or oversold. Lastly, techniques from existing financial forecasting models were not heavily examined or implemented — for instance, _differencing_ is an important step in handling time-series data which is non-stationary (mean and variance of variables change over time ), which is not something that was ever considered prior to recipe creation. 
 
-
-
-
-- mention RSI
-- mention prophet model, seasonality, and events
-- mention metric for long-term prediction
-- mention finding optimal lag distance
-- Mention integrating / differencing
+Despite a naive first approach to predicting stock market data, this analysis has given tremendous insight into the techniques one would use at real-world financial institutions. Moreover, all of the original questions we set out to explore (such as whether the best models are the same across all four stocks, or whether the first lag variable will always be the most important) have been completely answered. Although this project naturally opens up several more advanced questions (such as the relationship between number of days to forecast versus lag length), we leave these open for future exploration. 
