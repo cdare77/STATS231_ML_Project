@@ -1,0 +1,8 @@
+Open:     The opening price of the stock that day (specifically, the value of the stock at 9:30AM EST). (floating point data type / double)Close:    The closing price of the stock that day (specifically, the value of the stock at 4:00PM EST)   (floating point data type / double)Low:      The minimum valuation of the stock over the given day.  (floating point data type / double)High:     The maximum valuation of the stock over the given day.  (floating point data type / double)Volume:   The total number of shares traded on a stock over the given day (i.e. both bought and sold). (unsigned integer data type)Adjusted: The closing price of the stock that day together with any adjustments due to corporate actions such as rights offerings, dividends, and splits.  (floating point data type / double)
+SMA_1W
+
+Close_L[1-10]:  The closing value on the day exactly [1-10] days prior.
+SMA_cl_[1W,2W,1M,2M]: The simple moving average of the closing cost across [5,10,20,40] days.
+EMA_cl_[1W,2W,1M,2M]: The exponential moving average of the closing cost across [5,10,20,40] days.
+SMD_cl_[1W,2W,1M,2M]: The simple moving deviation of the closing cost across [5,10,20,40] days.
+MACD:     The Moving Average Convergence Divergence, i.e. the difference of EMA_cl_1M and EMA_cl_2W

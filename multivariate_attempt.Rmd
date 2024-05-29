@@ -1,0 +1,164 @@
+---
+title: "vector_based_forecast"
+author: "Chris Dare"
+date: "2024-05-28"
+output: html_document
+---
+
+# Loading Packages and Data
+
+
+```{r setup, include=TRUE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Required for statistical learning algorithms
+library(tidyverse)
+library(tidymodels)
+library(glmnet)
+library(ranger) # Random forests
+library(xgboost) # Extreme Gradient boosting
+library(yardstick) # Model Performance
+
+# Required for plotting
+library(ggplot2)
+library(corrplot)
+library(plotly) # Used in several of the rotating carousels for interactive plots
+library(dygraphs) # Used once in beginning for interactive plots of timeseries data
+
+# Required for formatting:
+library(kableExtra)
+library(scales) 
+library(swipeR) # Creates rotating carousels for images in HTML
+library(htmltools) # swipeR dependencies
+
+# Single function from entire library used:
+library(vip) # vip()
+library(visdat) #vis_miss() 
+
+# ETC:
+library(quantmod) #Allows dynamic loading and plotting of data
+
+
+
+tidymodels_prefer()
+conflicted::conflicts_prefer(yardstick::rsq)
+conflicted::conflicts_prefer(dplyr::lag)
+# Ensure that random processes return roughly same results each time
+set.seed(3435)
+```
+
+# Set up Data
+
+
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
+AMD <-loadSymbols("AMD", from="2023-01-01", to="2024-01-01", auto.assign = FALSE)
+my_dates <- index(AMD)
+# Typecast as dataframe object
+AMD <- data.frame(AMD)
+
+# Rename variables to remove redundancy
+AMD <- AMD %>% rename(
+  Close = AMD.Close,
+  High = AMD.High,
+  Low = AMD.Low,
+  Open = AMD.Open,
+  Volume = AMD.Volume,
+  Adjusted = AMD.Adjusted
+)
+AMD$Date <- my_dates
+
+# Define lag variables for AMD
+AMD$lag1 <- lag(AMD$Close, 1)
+AMD$lag2 <- lag(AMD$Close, 2)
+AMD$lag3 <- lag(AMD$Close, 3)
+AMD$lag4 <- lag(AMD$Close, 4)
+AMD$lag5 <- lag(AMD$Close, 5)
+AMD$lag6 <- lag(AMD$Close, 6)
+AMD$lag7 <- lag(AMD$Close, 7)
+AMD$lag8 <- lag(AMD$Close, 8)
+AMD$lag9 <- lag(AMD$Close, 9)
+AMD$lag10 <- lag(AMD$Close, 10)
+# Fill in NA entries in beginning of lag variables
+AMD <- AMD %>%
+  fill(lag1, .direction = "up") %>%
+  fill(lag2, .direction = "up") %>%
+  fill(lag3, .direction = "up") %>% 
+  fill(lag4, .direction = "up") %>% 
+  fill(lag5, .direction = "up") %>% 
+  fill(lag6, .direction = "up") %>% 
+  fill(lag7, .direction = "up") %>% 
+  fill(lag8, .direction = "up") %>% 
+  fill(lag9, .direction = "up") %>% 
+  fill(lag10, .direction = "up") 
+
+
+AMD$lead1 <- lead(AMD$Close, 1)
+AMD$lead2 <- lead(AMD$Close, 2)
+AMD$lead3 <- lead(AMD$Close, 3)
+
+AMD <- AMD %>%
+  fill(lead1, .direction="down") %>%
+  fill(lead2, .direction="down") %>%
+  fill(lead3, .direction="down")
+
+
+# N <- length(my_dates)
+# # AMD[,'Lags'] = c(0,0,0,0,0,0,0,0,0,0)
+# # AMD[, 'Leads'] = c(0,0,0)
+# 
+# for (i in 1:N) {
+#   lag_vec = list(c(AMD$lag1[i], AMD$lag2[i], AMD$lag3[i],
+#               AMD$lag4[i], AMD$lag5[i], AMD$lag6[i],
+#               AMD$lag7[i], AMD$lag8[i], AMD$lag9[i],
+#               AMD$lag10[i]))
+#   lead_vec = list( c(AMD$Close[i],AMD$lead1[i], AMD$lead2[i], AMD$lead3[i]))
+#   AMD$Lags[i] = I(lag_vec)
+#   AMD$Leads[i] = I(lead_vec)
+# }
+# 
+AMD<-select(AMD, c('Close','Date', 'lag1', 'lag2', 'lag3',
+                   'lag4', 'lag5', 'lag6', 'lag7', 'lag8',
+                   'lag9', 'lag10', 'lead1', 'lead2', 'lead3'))
+AMD %>% kable() %>% kable_styling(full_width = F)
+```
+
+
+
+```{r  eval = TRUE, include=TRUE, warning=FALSE}
+# Create 70-30 split for AMD data
+AMD_split <- initial_split(AMD, prop = 0.7)
+AMD_train <- training(AMD_split)
+AMD_test <- testing(AMD_split)
+
+
+AMD_recipe = AMD_train %>% recipe(Close ~ .) %>%
+  update_role(contains("lead"), new_role = "outcome") %>%
+  remove_role("Date", old_role="predictor") %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors()) 
+
+
+############################
+# Define Model for Elastic Net
+############################
+elastic_net_model <- linear_reg(mixture = tune(),
+                              penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+
+elastic_net_wflow_AMD <- workflow() %>%
+  add_model(elastic_net_model) %>%
+  add_recipe(AMD_recipe)
+
+AMD_folds  <- vfold_cv(AMD_train, v = 5)
+elastic_net_grid <- grid_regular(penalty(range=c(0,10), trans = identity_trans()), mixture(),
+                             levels = 15)
+
+elastic_net_tune_AMD  <- tune_grid(
+  elastic_net_wflow_AMD ,
+  resamples = AMD_folds,
+  grid = elastic_net_grid
+)
+
+elastic_net_tune_AMD
+```
