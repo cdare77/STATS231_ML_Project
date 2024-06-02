@@ -186,8 +186,9 @@ p <- dygraph(AMD[,c(1:4)], xlab = "Date", ylab = "Price", main = "AMD Price") %>
   dyRangeSelector() %>%
   dyCandlestick()%>%
   dyCrosshair(direction = "vertical") %>%
-  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
-  dyRoller(rollPeriod = 1)
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1) %>%
+  dyShading(from = "1720-1-1", to = "2126-1-1", color = "lightgray")
 p
 ```
 
@@ -204,8 +205,9 @@ p <- dygraph(NVDA[,c(1:4)], xlab = "Date", ylab = "Price", main = "NVDA Price") 
   dyRangeSelector() %>%
   dyCandlestick()%>%
   dyCrosshair(direction = "vertical") %>%
-  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
-  dyRoller(rollPeriod = 1)
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1) %>%
+  dyShading(from = "1720-1-1", to = "2126-1-1", color = "lightgray")
 p
 ```
 
@@ -220,8 +222,9 @@ p <- dygraph(INTC[,c(1:4)], xlab = "Date", ylab = "Price", main = "INTC Price") 
   dyRangeSelector() %>%
   dyCandlestick()%>%
   dyCrosshair(direction = "vertical") %>%
-  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
-  dyRoller(rollPeriod = 1)
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1) %>%
+  dyShading(from = "1720-1-1", to = "2126-1-1", color = "lightgray")
 p
 ```
 
@@ -236,8 +239,9 @@ p <- dygraph(TSM[,c(1:4)], xlab = "Date", ylab = "Price", main = "TSM Price") %>
   dyRangeSelector() %>%
   dyCandlestick()%>%
   dyCrosshair(direction = "vertical") %>%
-  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = T)  %>%
-  dyRoller(rollPeriod = 1)
+  dyHighlight(highlightCircleSize = 3, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = T)  %>%
+  dyRoller(rollPeriod = 1) %>%
+  dyShading(from = "1720-1-1", to = "2126-1-1", color = "lightgray")
 p
 ```
 
@@ -267,16 +271,7 @@ AMD$Close_L9 <- lag(AMD$Close, 9)
 AMD$Close_L10 <- lag(AMD$Close, 10)
 # Fill in NA entries in beginning of lag variables
 AMD <- AMD %>%
-  fill(Close_L1, .direction = "up") %>%
-  fill(Close_L2, .direction = "up") %>%
-  fill(Close_L3, .direction = "up") %>% 
-  fill(Close_L4, .direction = "up") %>% 
-  fill(Close_L5, .direction = "up") %>% 
-  fill(Close_L6, .direction = "up") %>% 
-  fill(Close_L7, .direction = "up") %>% 
-  fill(Close_L8, .direction = "up") %>% 
-  fill(Close_L9, .direction = "up") %>% 
-  fill(Close_L10, .direction = "up") 
+  fill(contains("Close_L"), .direction = "up") 
 
 # Define lag variables for NVDA
 NVDA$Close_L1 <- lag(NVDA$Close, 1)
@@ -291,16 +286,7 @@ NVDA$Close_L9 <- lag(NVDA$Close, 9)
 NVDA$Close_L10 <- lag(NVDA$Close, 10)
 # Fill in NA entries
 NVDA <- NVDA %>%
-  fill(Close_L1, .direction = "up") %>%
-  fill(Close_L2, .direction = "up") %>%
-  fill(Close_L3, .direction = "up") %>% 
-  fill(Close_L4, .direction = "up") %>% 
-  fill(Close_L5, .direction = "up") %>% 
-  fill(Close_L6, .direction = "up") %>% 
-  fill(Close_L7, .direction = "up") %>% 
-  fill(Close_L8, .direction = "up") %>% 
-  fill(Close_L9, .direction = "up") %>% 
-  fill(Close_L10, .direction = "up")
+  fill(contains("Close_L"), .direction = "up") 
 
 # Define lag variables for INTC
 INTC$Close_L1 <- lag(INTC$Close, 1)
@@ -315,16 +301,7 @@ INTC$Close_L9 <- lag(INTC$Close, 9)
 INTC$Close_L10 <- lag(INTC$Close, 10)
 # Fill in NA entries
 INTC <- INTC %>%
-  fill(Close_L1, .direction = "up") %>%
-  fill(Close_L2, .direction = "up") %>%
-  fill(Close_L3, .direction = "up") %>% 
-  fill(Close_L4, .direction = "up") %>% 
-  fill(Close_L5, .direction = "up") %>% 
-  fill(Close_L6, .direction = "up") %>% 
-  fill(Close_L7, .direction = "up") %>% 
-  fill(Close_L8, .direction = "up") %>% 
-  fill(Close_L9, .direction = "up") %>% 
-  fill(Close_L10, .direction = "up") 
+  fill(contains("Close_L"), .direction = "up") 
 
 # Define lag variables for TSM
 TSM$Close_L1 <- lag(TSM$Close, 1)
@@ -339,16 +316,7 @@ TSM$Close_L9 <- lag(TSM$Close, 9)
 TSM$Close_L10 <- lag(TSM$Close, 10)
 # Fill in NA entries
 TSM <- TSM %>%
-  fill(Close_L1, .direction = "up") %>%
-  fill(Close_L2, .direction = "up") %>%
-  fill(Close_L3, .direction = "up") %>% 
-  fill(Close_L4, .direction = "up") %>% 
-  fill(Close_L5, .direction = "up") %>% 
-  fill(Close_L6, .direction = "up") %>% 
-  fill(Close_L7, .direction = "up") %>% 
-  fill(Close_L8, .direction = "up") %>% 
-  fill(Close_L9, .direction = "up") %>% 
-  fill(Close_L10, .direction = "up") 
+  fill(contains("Close_L"), .direction = "up") 
 ```
 
 Any time one is utilizing lag variables in a time series problem, a natural question that arises is "how far back should we look to measure current data"? In other words, what is the optimal lag length $p$ for a given time series? It turns out this an incredibly involved problem that does not have a single universal answer for all time series-based questions; there are several advanced techniques guided by economic theory for auto-regressive models such as the F-test approach and Bayes information criterion (BIC) / Akaike information criterion (AIC) that are often used, but we will unfortunately omit any discussion of these techniques since the focus of this project is on the statistical learning models themselves. Instead, we will naively take the lag length to be two weeks (i.e. 10 business days) which is fairly short for economic time series problems measured on a daily scale.
@@ -1644,17 +1612,73 @@ load("tuned_grids/random_forest_tune_NVDA.rda")
 load("tuned_grids/random_forest_tune_INTC.rda")
 load("tuned_grids/random_forest_tune_TSM.rda")
 
-g1<-autoplot(random_forest_tune_AMD) + ggtitle("Random Forest AMD") + theme_dark() + theme(text = element_text(size = 9)) 
-g2<-autoplot(random_forest_tune_NVDA) + ggtitle("Random Forest NVDA") + theme_dark() + theme(text = element_text(size = 9))
-g3<-autoplot(random_forest_tune_INTC) + ggtitle("Random Forest INTC") + theme_dark() + theme(text = element_text(size = 9))
-g4<-autoplot(random_forest_tune_TSM) + ggtitle("Random Forest TSM") + theme_dark() + theme(text = element_text(size = 9))
 
-g1
-g2
+# Store ggplot autoplot objects in variables
+g1<-autoplot(random_forest_tune_AMD) 
+g2<-autoplot(random_forest_tune_NVDA) 
+g3<-autoplot(random_forest_tune_INTC) 
+g4<-autoplot(random_forest_tune_TSM) 
+
+
+###############################
+# Code Adapted from @Michiel Duvekot's answer on StackOverflow: https://stackoverflow.com/a/78564951/17434112 
+###############################
+
+# Extract the data from the autoplots and create objects with a compatible facet_grid 
+# which allow them to be passed to ggplotly objects
+
+pp1 <- ggplot(g1$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Minimal Node Size`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g1$data$name)),
+       y = "") +
+  ggtitle("Random Forest AMD") +
+  theme_dark() +
+  theme(text = element_text(size = 8)) 
+
+pp2 <- ggplot(g2$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Minimal Node Size`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g2$data$name)),
+       y = "") +
+  ggtitle("Random Forest NVDA") +
+  theme_dark() +
+  theme(text = element_text(size = 8))
+
+pp3 <- ggplot(g3$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Minimal Node Size`, scales = "free_y",  labeller = label_both)+
+  labs(x = paste(unique(g3$data$name)),
+       y = "") +
+  ggtitle("Random Forest INTC") +
+  theme_dark() +
+  theme(text = element_text(size = 8))
+
+pp4 <- ggplot(g4$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Minimal Node Size`, scales = "free_y",  labeller = label_both)+
+  labs(x = paste(unique(g4$data$name)),
+       y = "") +
+  ggtitle("Random Forest TSM") +
+  theme_dark() +
+  theme(text = element_text(size = 8))
+
+# The ggplotly objects can now be embedded in the JS Wrapper
+wrapper <- swipeRwrapper(
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp1)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp2)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp3)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp4))
+)
+swipeR(wrapper, height = "400px", navigationColor = "navy")
 
 ```
 
-We only provide the performance plots of random forest and boosted trees for two of our stocks, AMD and NVDA, since the formatting libraries (i.e. `ggplotly` and `swipeR`) are not compatible with the labelling / facet structure of `autoplot()` in these instances by default — a more detailed knowledge of `facet_wrap()` and `facet_grid()` is likely needed to pass the above autoplots into any sort of `ggplotly` object. Aside from the formatting technicalities, we notice that the best-performing random trees models require a larger number of randomly selected predictors, though the boosted trees models generally capture less variation of the outcome as the number of predictors grows.
+The performance plots of random forest and boosted trees require some extra work to ensure compatibility with the formatting libraries  `ggplotly` and `swipeR` used above — thanks to the help of [user Michiel Duvekot on StackOverflow](https://stackoverflow.com/a/78564951/17434112), this can be done by explicitly constructing `facet_grid()` data from the original autoplots. Aside from the formatting technicalities, we notice that the best-performing random trees models require a larger number of randomly selected predictors, though the boosted trees models generally capture less variation of the outcome as the number of predictors grows.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
 # Load tuned Boosted Trees grids
@@ -1663,8 +1687,72 @@ load("tuned_grids/boosted_trees_tune_NVDA.rda")
 load("tuned_grids/boosted_trees_tune_INTC.rda")
 load("tuned_grids/boosted_trees_tune_TSM.rda")
 
-autoplot(boosted_trees_tune_AMD) + theme_dark() + ggtitle("Boosted Trees AMD") + theme(text = element_text(size = 9))
-autoplot(boosted_trees_tune_NVDA) + theme_dark() + ggtitle("Boosted Trees NVDA") + theme(text = element_text(size = 9))
+g1<-autoplot(boosted_trees_tune_AMD)   
+g2<-autoplot(boosted_trees_tune_NVDA)  
+g3<-autoplot(boosted_trees_tune_INTC)  
+g4<-autoplot(boosted_trees_tune_TSM)  
+
+
+###############################
+# Code Adapted from @Michiel Duvekot's answer on StackOverflow: https://stackoverflow.com/a/78564951/17434112 
+###############################
+
+# Extract the data from the autoplots and create objects with a compatible facet_grid 
+# which allow them to be passed to ggplotly objects
+
+
+pp1 <- ggplot(g1$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Learning Rate`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g1$data$name)),
+       y = "") +
+  ggtitle("Boosted Trees AMD") +
+  theme_dark() +
+  theme(text = element_text(size = 8)) 
+
+pp2 <- ggplot(g2$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Learning Rate`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g2$data$name)),
+       y = "") +
+  ggtitle("Boosted Trees NVDA") +
+  theme_dark() +
+  theme(text = element_text(size = 8)) 
+
+pp3 <- ggplot(g3$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Learning Rate`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g3$data$name)),
+       y = "") +
+  ggtitle("Boosted Trees INTC") +
+  theme_dark() +
+  theme(text = element_text(size = 8)) 
+
+pp4 <- ggplot(g4$data, aes(x = value, y = mean, group = `# Trees`, color = `# Trees`)) +
+  geom_path() +
+  geom_point(size = 1) +
+  facet_grid(`.metric` ~ `Learning Rate`, scales = "free_y",  labeller = label_both) +
+  labs(x = paste(unique(g4$data$name)),
+       y = "") +
+  ggtitle("Boosted Trees TSM") +
+  theme_dark() +
+  theme(text = element_text(size = 8)) 
+
+
+
+# The ggplotly objects can now be embedded in the JS Wrapper
+wrapper <- swipeRwrapper(
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp1)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp2)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp3)),
+  tags$div(style = "width: 700px; margin: auto;", ggplotly(pp4))
+)
+swipeR(wrapper, height = "400px", navigationColor = "navy")
+
+
 ```
 
 <br/> <br/> <br/>
@@ -1812,6 +1900,7 @@ boosted_trees_fit_INTC  <- fit(boosted_trees_final_wflow_INTC, INTC_train)
 As a brief aside, with the models fit we now have all the information necessary to examine how much impact each predictor has. Although this step would have been much more valuable prior to the recipe creation (though this is a bit of a Catch-22 since a recipe, model, and fit is required to obtain the results), the `vip` library contains an incredibly useful tool to extract information from our tree-based statistical learning algorithms regarding which variables affect the outcome most heavily. For example, we can plot the *variable importance plots* for the AMD stock according to both the random forest algorithm and the boosted trees algorithm to see that there is a slight difference in terms of which variable is considered most relevant for predicting stock price:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+# AMD VIPs
 random_forest_fit_AMD %>% extract_fit_parsnip() %>% 
   vip() 
 
@@ -1822,6 +1911,7 @@ boosted_trees_fit_AMD %>% extract_fit_parsnip() %>%
 It should be noted that the horizontal axis scaling should be ignored since we are comparing the variable importance plots (VIPs) between two distinct tree algorithms. Though there is a slight difference between the ordering of the variables, we still see that the 1-day lag variable (i.e. the information from the previous day) is still one of the most important pieces of information between the two algorithms. This may lead one to believe that 'short-term' lag variables will always take precedence over 'long-term' variables in these time series-based problems — however, by looking at the VIPs for NVDA below we see that the first lag variable doesn't even appear in the top 50% for *either algorithm*.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE, fig.show="hold", out.width="50%"}
+# NVDA VIPs
 random_forest_fit_NVDA %>% extract_fit_parsnip() %>% 
   vip() 
 
@@ -1832,6 +1922,7 @@ boosted_trees_fit_NVDA %>% extract_fit_parsnip() %>%
 When the outcome of a time series depends much more heavily on long-term lag variables (say of lag-length $N \gg 1$) than more recent lag variables, this can indicate *periodicity* or *seasonality* in our data. It turns out that there are several methods in R that attempt to identify seasonality through basic Fourier analysis — however, we will leave further discussion for this topic to any future analyses that are more specific to time-series. It is also worth considering the case that the periodicity of the NVDA stock (i.e. dependence on 6-7 day old data) may simply be a feature of our sample of data set. For example, the importance of variables for our INTC and TSM stocks seems to be much closer to what a typical investor would choose to scrutinize in order to predict a stocks closing price.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
+# Save VIP plots in object to call wrap in ggplotly 
 g1<-random_forest_fit_INTC %>% extract_fit_parsnip() %>% 
   vip() + ggtitle("(ITNC) Random Forest VIP") 
 
@@ -1946,6 +2037,7 @@ boosted_trees_train_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_
 Using the `yardstick` package, we are then able to feed each model's matrix of predicted versus actual outcomes through the `rmse()` function to create a succinct table of the root mean squared error on the training data:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
+# Format results table for training RMSE
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
        AMD = c((linear_train_res_AMD  %>% rmse( Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rmse( Close, .pred))$.estimate,
@@ -1983,6 +2075,7 @@ tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "E
 Though of slightly less importance, we may also pipe the same data through the $R^2$ metric to see that effectively all our models accurately describe the variance in the closing price of each stock:
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
+# Format output table for training R^2
 tibble(Model = c("Linear Regression", "Ridge Regression", "Lasso Regression", "Elastic Net", "k-Nearest Neighbors", "Random Forest", "Boosted Trees"),
        AMD = c((linear_train_res_AMD  %>% rsq( Close, .pred))$.estimate,
                     (ridge_train_res_AMD  %>% rsq( Close, .pred))$.estimate,
@@ -2050,6 +2143,7 @@ boosted_trees_test_res_TSM  <- predict(boosted_trees_fit_TSM , new_data =  TSM_t
 ```
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
+# Format results table for Testing RMSE
 tibble(Model = c("Random Forest", "Boosted Trees"),
        AMD = c((random_forest_test_res_AMD  %>% rmse( Close, .pred))$.estimate,
                     (boosted_trees_test_res_AMD  %>% rmse( Close, .pred))$.estimate),
@@ -2067,6 +2161,7 @@ tibble(Model = c("Random Forest", "Boosted Trees"),
 Unlike the case of the training data, we see that both models perform with roughly the same accuracy according to our metrics. Fortunately, the fact that root mean squared error is relatively low across both models indicates that there is not likely much over-fitting occurring.
 
 ```{r eval = TRUE, include=TRUE, warning=FALSE}
+# Format results table for Testing R^2
 tibble(Model = c("Random Forest", "Boosted Trees"),
        AMD = c((random_forest_test_res_AMD  %>% rsq( Close, .pred))$.estimate,
                     (boosted_trees_test_res_AMD  %>% rsq( Close, .pred))$.estimate),
@@ -2159,16 +2254,8 @@ forecast_comparison <- function(symbol_string, tidy_fit, first_date, num_days = 
   initial_stock_data$Close_L10 <- lag(initial_stock_data$Close, 10)
   # Fill in NA entries in beginning of lag variables
   initial_stock_data <- initial_stock_data %>%
-    fill(Close_L1, .direction = "up") %>%
-    fill(Close_L2, .direction = "up") %>%
-    fill(Close_L3, .direction = "up") %>% 
-    fill(Close_L4, .direction = "up") %>% 
-    fill(Close_L5, .direction = "up") %>% 
-    fill(Close_L6, .direction = "up") %>% 
-    fill(Close_L7, .direction = "up") %>% 
-    fill(Close_L8, .direction = "up") %>% 
-    fill(Close_L9, .direction = "up") %>% 
-    fill(Close_L10, .direction = "up") 
+    fill(contains("Close_L"), .direction = "up") 
+
   # Obtain four simple moving averages 
   initial_stock_data$SMA_cl_1W <- simple_moving_average(initial_stock_data$Close, 5)
   initial_stock_data$SMA_cl_2W <- simple_moving_average(initial_stock_data$Close, 10)
@@ -2413,6 +2500,13 @@ Ultimately, the are several factors that should be taken into consideration for 
 
 Despite a naive first approach to predicting stock market data, this analysis has given tremendous insight into the techniques one would use at real-world financial institutions. Moreover, all the original questions we set out to explore (such as whether the best models are the same across all four stocks, or whether the first lag variable will always be the most important) have been completely answered. Although this project naturally opens several more advanced questions (such as the relationship between number of days to forecast versus lag length), we leave these open for future exploration.
 
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
 ## Sources
 
 [1] NYSE. (2023, Jan 3). The Gap, Inc. stock quote. Yahoo! Finance. <https://finance.yahoo.com/quote/AMD/history?period1=1672531200&period2=1704067200>
@@ -2424,3 +2518,5 @@ Despite a naive first approach to predicting stock market data, this analysis ha
 [4] NYSE. (2023, Jan 3). The Gap, Inc. stock quote. Yahoo! Finance. <https://finance.yahoo.com/quote/TSM/history?period1=1672531200&period2=1704067200>
 
 [5] \@ Macosso (2021, Aug 3). Stack Overflow. <https://stackoverflow.com/a/68631525/17434112>
+
+[6] \@ Michiel Duvekot (2024, Jun 1). Stack Overflow. <https://stackoverflow.com/a/78564951/17434112>

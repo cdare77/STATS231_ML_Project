@@ -79,16 +79,7 @@ AMD$lag9 <- lag(AMD$Close, 9)
 AMD$lag10 <- lag(AMD$Close, 10)
 # Fill in NA entries in beginning of lag variables
 AMD <- AMD %>%
-  fill(lag1, .direction = "up") %>%
-  fill(lag2, .direction = "up") %>%
-  fill(lag3, .direction = "up") %>% 
-  fill(lag4, .direction = "up") %>% 
-  fill(lag5, .direction = "up") %>% 
-  fill(lag6, .direction = "up") %>% 
-  fill(lag7, .direction = "up") %>% 
-  fill(lag8, .direction = "up") %>% 
-  fill(lag9, .direction = "up") %>% 
-  fill(lag10, .direction = "up") 
+  fill(contains("lag"), .direction = "up") 
 
 
 AMD$lead1 <- lead(AMD$Close, 1)
@@ -118,7 +109,9 @@ AMD <- AMD %>%
 AMD<-select(AMD, c('Close','Date', 'lag1', 'lag2', 'lag3',
                    'lag4', 'lag5', 'lag6', 'lag7', 'lag8',
                    'lag9', 'lag10', 'lead1', 'lead2', 'lead3'))
-AMD %>% kable() %>% kable_styling(full_width = F)
+AMD %>% head(20) %>%
+  kable() %>% 
+  kable_styling(full_width = F)
 ```
 
 
@@ -137,6 +130,11 @@ AMD_recipe = AMD_train %>% recipe(Close ~ .) %>%
   step_scale(all_predictors()) 
 
 
+AMD_folds  <- vfold_cv(AMD_train, v = 5)
+elastic_net_grid <- grid_regular(penalty(range=c(0,10), trans = identity_trans()), mixture(),
+                             levels = 15)
+
+
 ############################
 # Define Model for Elastic Net
 ############################
@@ -150,9 +148,6 @@ elastic_net_wflow_AMD <- workflow() %>%
   add_model(elastic_net_model) %>%
   add_recipe(AMD_recipe)
 
-AMD_folds  <- vfold_cv(AMD_train, v = 5)
-elastic_net_grid <- grid_regular(penalty(range=c(0,10), trans = identity_trans()), mixture(),
-                             levels = 15)
 
 elastic_net_tune_AMD  <- tune_grid(
   elastic_net_wflow_AMD ,
